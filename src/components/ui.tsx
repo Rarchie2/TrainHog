@@ -10,8 +10,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
-import { APP_MARK } from '@/config';
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useMe, useStore } from '@/data/store';
 import type { Category, Feel } from '@/data/types';
 import { BREAKPOINTS, colors, easyColors, fonts, radius, TOUCH, type Palette } from '@/theme';
@@ -204,12 +203,24 @@ export function Avatar({ initials, size = 40, brand }: { initials: string; size?
   );
 }
 
+// The Snout barbell: a barbell whose plates are pig snouts.
 export function Mark({ size = 36 }: { size?: number }) {
-  const { c } = useUI();
   return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontFamily: fonts.displayHeavy, color: c.brandInk, fontSize: size * 0.45 }}>{APP_MARK}</Text>
-    </View>
+    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel="TrainHog">
+      <Defs>
+        <LinearGradient id="markGrad" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#2A6AF0" />
+          <Stop offset="1" stopColor="#123E9C" />
+        </LinearGradient>
+      </Defs>
+      <Rect width={100} height={100} rx={23} fill="url(#markGrad)" />
+      <Rect x={26} y={46} width={48} height={8} rx={4} fill="#FFFFFF" />
+      <Circle cx={25} cy={50} r={15} fill="#FFFFFF" />
+      <Circle cx={75} cy={50} r={15} fill="#FFFFFF" />
+      {[20.5, 29.5, 70.5, 79.5].map((x) => (
+        <Ellipse key={x} cx={x} cy={50} rx={2.8} ry={5.5} fill="#1E5BD8" />
+      ))}
+    </Svg>
   );
 }
 
