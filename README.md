@@ -21,6 +21,17 @@ Then:
 
 To build the web version as static files: `npm run build:web` (output goes to `dist/`).
 
+## Put it on your phone (no App Store needed)
+
+The web app is live at **https://rarchie2.github.io/TrainHog/**.
+
+- **iPhone:** open the link in Safari, tap Share, then **Add to Home Screen**.
+- **Android:** open it in Chrome, tap the ⋮ menu, then **Install app** or **Add to Home screen**.
+
+It then opens full screen with the TrainHog icon, like a normal app.
+
+To update it: `npm run build:pages`, then push the `dist/` folder to the `gh-pages` branch.
+
 ## What's in it
 
 One codebase covers phone, iPad and laptop. The layout changes with screen width:
