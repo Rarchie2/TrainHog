@@ -8,10 +8,11 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.trainhog.app",
+      "bundleIdentifier": "com.archmorrow.trainhog",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "appleTeamId": "5897Q3CNL8"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +22,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.trainhog.app"
+      "package": "com.archmorrow.trainhog"
     },
     "web": {
       "favicon": "./assets/favicon.png",

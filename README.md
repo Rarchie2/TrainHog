@@ -23,7 +23,7 @@ To build the web version as static files: `npm run build:web` (output goes to `d
 
 ## Build the real iPhone app (TestFlight)
 
-The app is set up for EAS (`eas.json`, bundle ID `com.trainhog.app`). On your own computer:
+The app is set up for EAS (`eas.json`, bundle ID `com.archmorrow.trainhog`, Apple team `5897Q3CNL8`, the same Archmorrow team as Mathryx). On your own computer:
 
 ```bash
 git clone https://github.com/Rarchie2/TrainHog.git
@@ -34,6 +34,8 @@ npx eas-cli@latest build --platform ios --profile production --auto-submit
 ```
 
 The first run asks to create the Expo project, sign in to Apple and make the certificates; say yes to each. When it finishes, the build goes to App Store Connect and shows up in TestFlight after Apple's processing. Later builds only need the last command.
+
+**Prefer Xcode, like Mathryx?** Run `npx expo prebuild --platform ios`, then open `ios/TrainHog.xcworkspace` in Xcode and use Product > Archive > Distribute App as usual. (Needs CocoaPods: `brew install cocoapods`.) The `ios/` folder is generated, so don't edit it by hand; change `app.json` and run prebuild again.
 
 ## Put it on your phone as a web app (no App Store needed)
 
