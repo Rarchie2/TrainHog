@@ -29,7 +29,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "build:web": "expo export --platform web"
+    "build:web": "expo export --platform web",
+    "build:pages": "BASE_URL=/TrainHog expo export --platform web && BASE_URL=/TrainHog node scripts/pwa.mjs"
   },
   "private": true
 }
