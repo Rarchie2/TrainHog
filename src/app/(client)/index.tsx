@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
-import { CategoryTile, MessageCard, MobileTopBar } from '@/components/ClientBits';
+import { CategoryTile, MessageCard, MobileTopBar, WeeklyCard, WeeklyPrompt } from '@/components/ClientBits';
 import { Icon } from '@/components/Icon';
 import {
   Avatar,
@@ -26,12 +26,19 @@ import {
 } from '@/components/ui';
 import { longDate } from '@/data/sample';
 import { greeting, useClientData } from '@/data/selectors';
-import { useLookups, useMe } from '@/data/store';
+import { useLookups, useMe, useStore } from '@/data/store';
 import { fonts, radius } from '@/theme';
 
 export default function Today() {
   const me = useMe();
-  return me.easyView ? <EasyToday /> : <CleanToday />;
+  const st = useStore();
+  const d = useClientData(me.id);
+  return (
+    <>
+      {me.easyView ? <EasyToday /> : <CleanToday />}
+      <WeeklyPrompt visible={d.weeklyDue && !st.weeklyPromptDismissed} onLater={st.dismissWeeklyPrompt} />
+    </>
+  );
 }
 
 // Concept A: Clean cards.
@@ -102,6 +109,8 @@ function CleanToday() {
         <Button small variant="warn" title="Check in now" onPress={() => router.navigate(`/checkin/${d.missingCheckIn!.id}`)} />
       </Card>
     ) : null;
+
+  const weekly = d.weeklyDue ? <WeeklyCard key="weekly" /> : null;
 
   const week = (
     <Card key="week">
@@ -177,6 +186,7 @@ function CleanToday() {
         <View style={{ gap: 16 }}>
           {message}
           {hero}
+          {weekly}
           {reminder}
           {week}
           {cats}
@@ -190,6 +200,7 @@ function CleanToday() {
           </View>
           <View style={{ flex: 1, gap: 18 }}>
             {message}
+            {weekly}
             {reminder}
             {week}
             {recent}
@@ -203,6 +214,7 @@ function CleanToday() {
           </View>
           <View style={{ flex: 1, gap: 20 }}>
             {message}
+            {weekly}
             {reminder}
           </View>
           <View style={{ flex: 1, gap: 20 }}>
@@ -270,6 +282,7 @@ function EasyToday() {
     { icon: 'grid' as const, title: 'My sessions', sub: `${d.mySessions.length} sessions from Hogan`, href: '/sessions' },
     { icon: 'book' as const, title: 'My diary', sub: `${d.doneThisWeek} sessions this week`, href: '/diary' },
     { icon: 'chat' as const, title: 'Tell Hogan how I feel', sub: 'Including any pain', href: d.logs[0] ? `/checkin/${d.logs[0].id}` : '/diary' },
+    ...(d.weeklyDue ? [{ icon: 'cal' as const, title: 'Weekly check-in', sub: '8 quick questions', href: '/weekly' }] : []),
   ];
 
   return (

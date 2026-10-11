@@ -36,6 +36,10 @@ export type Client = {
   invite: 'joined' | 'sent' | 'guardian-sent' | 'paused';
   lastActive: string; // human readable for the demo
   daysSinceActive: number;
+  goalType?: 'lose' | 'gain' | 'maintain'; // which way bodyweight should go
+  planWeeks?: number; // length of the current plan, e.g. 8
+  planStart?: string; // ISO date the plan started
+  community?: boolean; // opted in to the community feed
 };
 
 export type Exercise = {
@@ -58,6 +62,7 @@ export type SessionExercise = {
   weight?: string;
   restSec: number;
   note?: string;
+  ifStruggling?: string; // Hogan's tip if the client can't manage it
 };
 
 export type Session = {
@@ -81,6 +86,7 @@ export type Assignment = {
   days: string[]; // e.g. ["Thu", "Sat"]
   favourite?: boolean;
   isNew?: boolean;
+  plan?: SessionExercise[]; // this client's own sets, reps, weight and rest
 };
 
 export type Feel = 1 | 2 | 3 | 4 | 5; // Really hard ... Really easy
@@ -119,6 +125,7 @@ export type SessionLog = {
   date: string; // ISO date
   dateLabel: string;
   completedExerciseIds: ID[];
+  changes?: ExerciseChange[];
   checkIn?: CheckIn;
   seenByTrainer: boolean;
   minutesAgo: number;
@@ -144,4 +151,48 @@ export type Message = {
   clientId: ID;
   text: string;
   at: string;
+};
+
+// What a client noted on an exercise during a session.
+export type ChangeKind = 'lowered-weight' | 'raised-weight' | 'changed-variation' | 'fewer-reps' | 'issue';
+
+export type ExerciseChange = {
+  exerciseId: ID;
+  kinds: ChangeKind[];
+  weightUsed?: string;
+  note?: string;
+};
+
+// Progress over the plan: bodyweight and the top weight on key lifts.
+export type BodyweightEntry = { clientId: ID; date: string; kg: number };
+export type LiftEntry = { clientId: ID; exerciseId: ID; date: string; kg: number };
+
+export type WeeklyAnswer = { questionId: string; value: string | number };
+
+export type WeeklyCheckIn = {
+  id: ID;
+  clientId: ID;
+  date: string;
+  dateLabel: string;
+  answers: WeeklyAnswer[];
+  seenByTrainer: boolean;
+  minutesAgo: number;
+};
+
+export type CommunityPost = {
+  id: ID;
+  clientId: ID;
+  presetId: string;
+  detail?: string; // e.g. the session name or "2 kg"
+  at: string;
+  minutesAgo: number;
+  reactions: Record<string, ID[]>; // emoji -> client ids
+};
+
+export type InPersonSession = {
+  id: ID;
+  clientId: ID;
+  date: string; // ISO date
+  time: string; // "10:00"
+  place: string;
 };

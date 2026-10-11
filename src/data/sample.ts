@@ -3,9 +3,14 @@
 
 import type {
   Assignment,
+  BodyweightEntry,
   Business,
   Client,
+  CommunityPost,
   DiaryEntry,
+  InPersonSession,
+  LiftEntry,
+  WeeklyCheckIn,
   Exercise,
   Message,
   PainReport,
@@ -94,17 +99,17 @@ const s = (
 
 export const sessions: Session[] = [
   s('s1', 'Lower body strength A', 'Strength', 40, 'Dumbbells', 2, 'Builds leg and hip strength for running and everyday life.', [
-    { exerciseId: 'e1', sets: 3, reps: '10', weight: '16 kg', restSec: 60 },
-    { exerciseId: 'e2', sets: 3, reps: '10', weight: '2 x 10 kg', restSec: 60 },
-    { exerciseId: 'e3', sets: 3, reps: '8 each side', restSec: 60, note: 'Swap for step-ups if the knee is sore.' },
+    { exerciseId: 'e1', sets: 3, reps: '10', weight: '16 kg', restSec: 60, ifStruggling: 'Drop to 12 kg and keep the reps. If your knee grumbles, squat to a bench instead.' },
+    { exerciseId: 'e2', sets: 3, reps: '10', weight: '2 x 10 kg', restSec: 60, ifStruggling: 'Use 2 x 8 kg and only lower to your knees. Back flat is more important than the weight.' },
+    { exerciseId: 'e3', sets: 3, reps: '8 each side', restSec: 60, note: 'Swap for step-ups if the knee is sore.', ifStruggling: 'Swap to step-ups on a low step, 8 each leg.' },
     { exerciseId: 'e4', sets: 3, reps: '12', restSec: 45 },
     { exerciseId: 'e5', sets: 3, reps: '15', restSec: 30 },
     { exerciseId: 'e6', sets: 3, reps: '8 each side', restSec: 30 },
   ], '2 days ago', 'Stop if you feel sharp pain in the knee.'),
   s('s2', 'Upper body B', 'Strength', 35, 'Dumbbells, bench', 2, 'Pushing and pulling strength with good posture.', [
     { exerciseId: 'e8', sets: 3, reps: '10', restSec: 60 },
-    { exerciseId: 'e9', sets: 3, reps: '10 each side', weight: '12 kg', restSec: 60 },
-    { exerciseId: 'e10', sets: 3, reps: '10', weight: '2 x 8 kg', restSec: 60 },
+    { exerciseId: 'e9', sets: 3, reps: '10 each side', weight: '12 kg', restSec: 60, ifStruggling: 'Go down to 10 kg and pause for a second at the top.' },
+    { exerciseId: 'e10', sets: 3, reps: '10', weight: '2 x 8 kg', restSec: 60, ifStruggling: 'Sit on a bench with back support and use 2 x 6 kg.' },
     { exerciseId: 'e6', sets: 2, reps: '8 each side', restSec: 30 },
   ], '1 week ago'),
   s('s3', 'Knee-friendly lower body', 'Rehab', 30, 'Step, band', 1, 'Strength for the legs without loading a sore knee.', [
@@ -151,7 +156,7 @@ export const sessions: Session[] = [
   ], 'Last week', 'Always hold the counter.'),
   s('s10', 'Sit-to-stand strength', 'Strength', 20, 'A sturdy chair', 1, 'Makes getting up from chairs and the car easier.', [
     { exerciseId: 'e23', sets: 1, time: '1 minute', restSec: 30 },
-    { exerciseId: 'e14', sets: 3, reps: '8', restSec: 60 },
+    { exerciseId: 'e14', sets: 3, reps: '8', restSec: 60, ifStruggling: 'Use a higher chair or a cushion, and push on your thighs with your hands.' },
     { exerciseId: 'e17', sets: 2, reps: '10 each leg', restSec: 45 },
     { exerciseId: 'e5', sets: 2, reps: '10', restSec: 30 },
   ], 'Last week'),
@@ -160,11 +165,11 @@ export const sessions: Session[] = [
 const cl = (c: Omit<Client, 'businessId'>): Client => ({ ...c, businessId: 'b1' });
 
 export const clients: Client[] = [
-  cl({ id: 'c1', firstName: 'Sarah', lastName: 'Collins', initials: 'SC', contact: '07700 900123', ageGroup: 'adult', goals: 'Run a half marathon in the spring without knee pain.', conditions: 'Occasional left knee pain on lunges.', trainerNotes: 'Responds well to clear numbers. Watch the left knee.', programme: 'Strength block · week 3 of 6', easyView: false, invite: 'joined', lastActive: 'Today', daysSinceActive: 0 }),
-  cl({ id: 'c2', firstName: 'Margaret', lastName: 'Ellis', initials: 'ME', contact: '07700 900456', ageGroup: 'senior', goals: 'Feel steadier on her feet and keep gardening.', conditions: 'Right knee osteoarthritis. Mild balance worries.', trainerNotes: 'Prefers voice notes. Daughter helped set up the app.', programme: 'Gentle start · week 2 of 6', easyView: true, invite: 'joined', lastActive: '12 minutes ago', daysSinceActive: 0 }),
-  cl({ id: 'c3', firstName: 'Tom', lastName: 'Reid', initials: 'TR', contact: 'tom@example.com', ageGroup: 'adult', goals: 'Build upper body strength.', conditions: 'None.', trainerNotes: '', programme: 'Upper and lower split', easyView: false, invite: 'joined', lastActive: '38 minutes ago', daysSinceActive: 0 }),
-  cl({ id: 'c4', firstName: 'Priya', lastName: 'Shah', initials: 'PS', contact: 'priya@example.com', ageGroup: 'adult', goals: 'Stay fit while travelling for work.', conditions: 'None.', trainerNotes: 'Away most weeks. Hotel sessions.', programme: 'Travel plan', easyView: false, invite: 'joined', lastActive: '1 hour ago', daysSinceActive: 0 }),
-  cl({ id: 'c5', firstName: 'Dave', lastName: 'Morgan', initials: 'DM', contact: '07700 900789', ageGroup: 'adult', goals: 'Ease lower back stiffness.', conditions: 'Desk job, stiff back.', trainerNotes: '', programme: 'Mobility first', easyView: false, invite: 'joined', lastActive: '3 hours ago', daysSinceActive: 0 }),
+  cl({ id: 'c1', firstName: 'Sarah', lastName: 'Collins', initials: 'SC', contact: '07700 900123', ageGroup: 'adult', goals: 'Run a half marathon in the spring without knee pain.', conditions: 'Occasional left knee pain on lunges.', trainerNotes: 'Responds well to clear numbers. Watch the left knee.', programme: 'Strength block · week 7 of 8', easyView: false, invite: 'joined', lastActive: 'Today', daysSinceActive: 0, goalType: 'lose', planWeeks: 8, planStart: isoDate(daysAgo(43)), community: true }),
+  cl({ id: 'c2', firstName: 'Margaret', lastName: 'Ellis', initials: 'ME', contact: '07700 900456', ageGroup: 'senior', goals: 'Feel steadier on her feet and keep gardening.', conditions: 'Right knee osteoarthritis. Mild balance worries.', trainerNotes: 'Prefers voice notes. Daughter helped set up the app.', programme: 'Gentle start · week 3 of 8', easyView: true, invite: 'joined', lastActive: '12 minutes ago', daysSinceActive: 0, goalType: 'maintain', planWeeks: 8, planStart: isoDate(daysAgo(15)), community: false }),
+  cl({ id: 'c3', firstName: 'Tom', lastName: 'Reid', initials: 'TR', contact: 'tom@example.com', ageGroup: 'adult', goals: 'Build upper body strength.', conditions: 'None.', trainerNotes: '', programme: 'Muscle gain · week 8 of 8', easyView: false, invite: 'joined', lastActive: '38 minutes ago', daysSinceActive: 0, goalType: 'gain', planWeeks: 8, planStart: isoDate(daysAgo(52)), community: true }),
+  cl({ id: 'c4', firstName: 'Priya', lastName: 'Shah', initials: 'PS', contact: 'priya@example.com', ageGroup: 'adult', goals: 'Stay fit while travelling for work.', conditions: 'None.', trainerNotes: 'Away most weeks. Hotel sessions.', programme: 'Travel plan · week 4 of 8', easyView: false, invite: 'joined', lastActive: '1 hour ago', daysSinceActive: 0, goalType: 'maintain', planWeeks: 8, planStart: isoDate(daysAgo(24)), community: true }),
+  cl({ id: 'c5', firstName: 'Dave', lastName: 'Morgan', initials: 'DM', contact: '07700 900789', ageGroup: 'adult', goals: 'Ease lower back stiffness.', conditions: 'Desk job, stiff back.', trainerNotes: '', programme: 'Mobility first · week 2 of 8', easyView: false, invite: 'joined', lastActive: '3 hours ago', daysSinceActive: 0, goalType: 'lose', planWeeks: 8, planStart: isoDate(daysAgo(10)), community: true }),
   cl({ id: 'c6', firstName: 'Ben', lastName: 'Lowe', initials: 'BL', contact: 'ben@example.com', ageGroup: 'adult', goals: 'Get back into training after a new baby.', conditions: 'None.', trainerNotes: 'Busy at home. Keep sessions short.', programme: 'Strength block · week 1 of 6', easyView: false, invite: 'joined', lastActive: '9 days ago', daysSinceActive: 9 }),
   cl({ id: 'c7', firstName: 'Ruth', lastName: 'Owens', initials: 'RO', contact: '07700 900321', ageGroup: 'senior', goals: 'Keep up with the grandchildren.', conditions: 'Hip replacement two years ago.', trainerNotes: '', programme: 'Gentle start · week 4 of 6', easyView: true, invite: 'joined', lastActive: '12 days ago', daysSinceActive: 12 }),
   cl({ id: 'c8', firstName: 'Callum', lastName: 'Fry', initials: 'CF', contact: 'Parent: 07700 900654', ageGroup: 'under-18', goals: 'Pre-season fitness for football.', conditions: 'None.', trainerNotes: 'Aged 16. Parent must accept the invite.', programme: 'Football pre-season', easyView: false, invite: 'guardian-sent', lastActive: 'Not joined yet', daysSinceActive: 99 }),
@@ -199,6 +204,7 @@ const log = (l: Omit<SessionLog, 'date' | 'dateLabel'> & { daysAgo: number }): S
 
 export const sessionLogs: SessionLog[] = [
   log({ id: 'l1', clientId: 'c1', sessionId: 's1', daysAgo: 2, minutesAgo: 2 * 1440, completedExerciseIds: ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'], seenByTrainer: true,
+    changes: [{ exerciseId: 'e2', kinds: ['lowered-weight'], weightUsed: '2 x 8 kg', note: 'Lower back felt tight on the last set.' }, { exerciseId: 'e3', kinds: ['changed-variation', 'issue'], note: 'Did step-ups instead. Left knee twinged on the first lunge.' }],
     checkIn: { feel: 2, effort: 8, enjoyed: 'Goblet squats felt great.', hardExerciseIds: ['e3'], hardNote: 'Walking lunges hurt the left knee a bit.', pain: false } }),
   log({ id: 'l2', clientId: 'c1', sessionId: 's4', daysAgo: 1, minutesAgo: 1440, completedExerciseIds: ['e11', 'e12', 'e13', 'e22'], seenByTrainer: false }),
   log({ id: 'l3', clientId: 'c1', sessionId: 's2', daysAgo: 5, minutesAgo: 5 * 1440, completedExerciseIds: ['e8', 'e9', 'e10', 'e6'], seenByTrainer: true,
@@ -210,6 +216,7 @@ export const sessionLogs: SessionLog[] = [
   log({ id: 'l6', clientId: 'c2', sessionId: 's10', daysAgo: 0, minutesAgo: 14, completedExerciseIds: ['e23', 'e14'], seenByTrainer: false,
     checkIn: { feel: 2, effort: 6, hardExerciseIds: ['e14'], pain: true, forTrainer: 'Stopped after the sit to stands.' } }),
   log({ id: 'l7', clientId: 'c3', sessionId: 's2', daysAgo: 0, minutesAgo: 38, completedExerciseIds: ['e8', 'e9', 'e10', 'e6'], seenByTrainer: false,
+    changes: [{ exerciseId: 'e9', kinds: ['raised-weight'], weightUsed: '14 kg' }],
     checkIn: { feel: 4, effort: 7, enjoyed: 'Felt strong, went up to 14 kg on the row.', hardExerciseIds: [], pain: false } }),
   log({ id: 'l8', clientId: 'c4', sessionId: 's5', daysAgo: 0, minutesAgo: 62, completedExerciseIds: ['e19', 'e20', 'e21'], seenByTrainer: false,
     checkIn: { feel: 3, effort: 6, hardExerciseIds: ['e20'], pain: false, voiceNote: { length: '0:24', transcript: 'Did it in the hotel in Leeds. The squat thrusts were tough but fine.' } } }),
@@ -234,4 +241,62 @@ export const replies: Reply[] = [
 export const messages: Message[] = [
   { id: 'm1', clientId: 'c1', text: "Take it easy on the left knee this week. Swap the walking lunges for step-ups and we'll look at it on Saturday.", at: 'Yesterday, 6:40pm' },
   { id: 'm2', clientId: 'c2', text: 'Lovely work yesterday, Margaret. Keep one hand on the kitchen counter for the balance exercise.', at: 'Yesterday, 5:15pm' },
+];
+
+// Progress over each plan. One weigh-in and one top set per lift each week,
+// with a little wobble so the graphs look like real life.
+const wobble = (i: number, seed: number) => Math.round(Math.sin(i * 1.7 + seed) * 3) / 10;
+function series(weeks: number, start: number, end: number, seed: number) {
+  return Array.from({ length: weeks }, (_, i) => {
+    const t = weeks === 1 ? 1 : i / (weeks - 1);
+    return Math.round((start + (end - start) * t + (i === 0 || i === weeks - 1 ? 0 : wobble(i, seed))) * 10) / 10;
+  });
+}
+const weekDates = (weeks: number, startDaysAgo: number) => Array.from({ length: weeks }, (_, i) => isoDate(daysAgo(startDaysAgo - i * 7)));
+
+const PROGRESS: { clientId: string; weeks: number; startDaysAgo: number; bw: [number, number]; lifts: [string, number, number][] }[] = [
+  { clientId: 'c1', weeks: 7, startDaysAgo: 43, bw: [72.4, 69.8], lifts: [['e1', 12, 18], ['e2', 16, 24], ['e9', 8, 12]] },
+  { clientId: 'c3', weeks: 8, startDaysAgo: 52, bw: [74.0, 77.1], lifts: [['e9', 10, 16], ['e10', 12, 18], ['e1', 16, 26]] },
+  { clientId: 'c2', weeks: 3, startDaysAgo: 15, bw: [68.2, 68.0], lifts: [] },
+  { clientId: 'c4', weeks: 4, startDaysAgo: 24, bw: [61.5, 61.2], lifts: [] },
+  { clientId: 'c5', weeks: 2, startDaysAgo: 10, bw: [92.0, 91.1], lifts: [] },
+];
+
+export const bodyweights: BodyweightEntry[] = PROGRESS.flatMap((p, n) => {
+  const d = weekDates(p.weeks, p.startDaysAgo);
+  return series(p.weeks, p.bw[0], p.bw[1], n).map((kg, i) => ({ clientId: p.clientId, date: d[i], kg }));
+});
+
+export const lifts: LiftEntry[] = PROGRESS.flatMap((p, n) => {
+  const d = weekDates(p.weeks, p.startDaysAgo);
+  return p.lifts.flatMap(([exerciseId, a, b], j) =>
+    series(p.weeks, a, b, n + j).map((kg, i) => ({ clientId: p.clientId, exerciseId, date: d[i], kg: Math.round(kg * 2) / 2 })),
+  );
+});
+
+export const weeklyCheckIns: WeeklyCheckIn[] = [
+  { id: 'w1', clientId: 'c3', date: isoDate(daysAgo(0)), dateLabel: 'Today', minutesAgo: 95, seenByTrainer: false, answers: [
+    { questionId: 'weight', value: 77.1 }, { questionId: 'energy', value: 4 }, { questionId: 'sleep', value: 3 }, { questionId: 'stress', value: 2 },
+    { questionId: 'food', value: 4 }, { questionId: 'sessions', value: 'All of them' }, { questionId: 'win', value: 'Rowed 16 kg for all three sets.' }, { questionId: 'note', value: 'Away next weekend, will do the hotel session.' },
+  ] },
+  { id: 'w2', clientId: 'c1', date: isoDate(daysAgo(7)), dateLabel: relativeLabel(7), minutesAgo: 7 * 1440, seenByTrainer: true, answers: [
+    { questionId: 'weight', value: 70.3 }, { questionId: 'energy', value: 3 }, { questionId: 'sleep', value: 2 }, { questionId: 'stress', value: 4 },
+    { questionId: 'food', value: 3 }, { questionId: 'sessions', value: 'Most' }, { questionId: 'win', value: 'Walked 5 km with the dog.' }, { questionId: 'note', value: 'Busy week at work.' },
+  ] },
+];
+
+export const communityPosts: CommunityPost[] = [
+  { id: 'cp1', clientId: 'c3', presetId: 'pb', at: '35 min ago', minutesAgo: 35, reactions: { '🔥': ['c1', 'c4'], '💪': ['c5'] } },
+  { id: 'cp2', clientId: 'c4', presetId: 'smashed', detail: 'Hotel room intervals', at: '1 hr ago', minutesAgo: 60, reactions: { '👏': ['c3'] } },
+  { id: 'cp3', clientId: 'c5', presetId: 'early', at: '3 hr ago', minutesAgo: 180, reactions: {} },
+  { id: 'cp4', clientId: 'c1', presetId: 'lost', detail: '2.6 kg', at: 'Yesterday', minutesAgo: 1500, reactions: { '🙌': ['c3', 'c4', 'c5'] } },
+  { id: 'cp5', clientId: 'c3', presetId: 'streak', detail: '8', at: '2 days ago', minutesAgo: 2900, reactions: { '🔥': ['c1'] } },
+];
+
+// Hogan's face-to-face sessions. Today's are what his dashboard shows.
+export const inPerson: InPersonSession[] = [
+  { id: 'ip1', clientId: 'c2', date: isoDate(daysAgo(0)), time: '09:30', place: 'Home visit' },
+  { id: 'ip2', clientId: 'c1', date: isoDate(daysAgo(0)), time: '12:00', place: 'The gym' },
+  { id: 'ip3', clientId: 'c3', date: isoDate(daysAgo(0)), time: '17:30', place: 'The gym' },
+  { id: 'ip4', clientId: 'c6', date: isoDate(daysAgo(-1)), time: '07:00', place: 'The gym' },
 ];

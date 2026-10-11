@@ -10,12 +10,13 @@ export default function SessionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const me = useMe();
   const st = useStore();
-  const { session, exercise } = useLookups();
+  const { session, exercise, planFor } = useLookups();
   const { c } = useUI();
   const { size } = useLayout();
   const s = session(id);
   if (!s) return <Page><Body>That session could not be found.</Body></Page>;
   const assignment = st.assignments.find((a) => a.clientId === me.id && a.sessionId === id);
+  const plan = planFor(me.id, s.id);
 
   const overview = (
     <Card>
@@ -49,8 +50,9 @@ export default function SessionDetail() {
 
   const list = (
     <Card>
-      <H3>{s.exercises.length} exercises</H3>
-      {s.exercises.map((x, i) => {
+      <H3>{plan.length} exercises</H3>
+      {assignment?.plan ? <Tag label="Numbers set for you by Hogan" icon="check" tone="ok" /> : null}
+      {plan.map((x, i) => {
         const e = exercise(x.exerciseId);
         return (
           <View key={i} style={{ flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 6, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>

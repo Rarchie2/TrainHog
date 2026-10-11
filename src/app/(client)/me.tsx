@@ -78,6 +78,9 @@ export default function Me() {
           <Row title="Session reminders" sub="Weekdays at 7:30am">
             <Toggle label="Session reminders" value={reminders} onChange={setReminders} />
           </Row>
+          <Row title="Weekly check-in reminder" sub="Sundays at 9am, as a pop-up">
+            <Toggle label="Weekly check-in reminder" value={reminders} onChange={setReminders} />
+          </Row>
           <Row title="Lock with Face ID or a PIN" sub="Useful on a shared family device">
             <Toggle label="Lock with Face ID" value={faceId} onChange={setFaceId} />
           </Row>
@@ -85,6 +88,9 @@ export default function Me() {
         </Card>
         <Card>
           <H3>Privacy</H3>
+          <Row title="Show me in the community" sub="Emoji posts only. Your weight and check-ins are never shared.">
+            <Toggle label="Show me in the community" value={!!me.community} onChange={(v) => st.setCommunity(me.id, v)} />
+          </Row>
           <Row title="See what Hogan can see" onPress={() => {}} />
           <Row title="Download my data" onPress={() => {}} />
           <Row title="Delete my account" onPress={() => {}} />

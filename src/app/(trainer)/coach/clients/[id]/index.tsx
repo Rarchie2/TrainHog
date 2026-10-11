@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
-import { CheckInItem, PainCard } from '@/components/CoachBits';
+import { CheckInItem, PainCard, WeeklyItem } from '@/components/CoachBits';
+import { ProgressCard } from '@/components/Progress';
 import { Icon } from '@/components/Icon';
 import { Avatar, Body, BodyBold, Button, Card, Chip, Columns, H3, Page, Small, Tag, Title, Toggle, useLayout, useUI } from '@/components/ui';
 import { useClientData } from '@/data/selectors';
@@ -102,6 +103,7 @@ export default function ClientDetail() {
             </Small>
           </View>
           {assignment.isNew ? <Tag label="New" tone="warn" /> : null}
+          <Button small variant="ghost" title={assignment.plan ? 'Edit numbers' : 'Set numbers'} onPress={() => router.navigate(`/coach/clients/${who.id}/plan/${assignment.id}`)} />
         </View>
       ))}
     </Card>
@@ -119,6 +121,21 @@ export default function ClientDetail() {
           </View>
         ))}
         {efforts.length === 0 ? <Small>No check-ins yet.</Small> : null}
+      </View>
+    </Card>
+  );
+
+  const weekly = (
+    <Card>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <H3>Weekly check-ins</H3>
+        {d.weeklyDue ? <Tag label="Due this week" tone="warn" /> : <Tag label="Up to date" tone="ok" icon="check" />}
+      </View>
+      <View>
+        {d.weekly.slice(0, 3).map((w) => (
+          <WeeklyItem key={w.id} w={w} showClient={false} />
+        ))}
+        {d.weekly.length === 0 ? <Small>No weekly check-ins yet.</Small> : null}
       </View>
     </Card>
   );
@@ -158,6 +175,7 @@ export default function ClientDetail() {
             {who.programme} · Last active {who.lastActive.toLowerCase()}
           </Small>
         </View>
+        <Button small variant="ghost" icon="cal" title="Last 7 days" onPress={() => router.navigate(`/coach/clients/${who.id}/week`)} />
         {who.invite !== 'joined' ? <Button small variant="ghost" icon="send" title="Resend invite" /> : null}
       </View>
       {d.pain.map((p) => (
@@ -169,7 +187,11 @@ export default function ClientDetail() {
         {sessions}
         {trend}
       </Columns>
-      {history}
+      <ProgressCard clientId={who.id} />
+      <Columns cols={size === 'wide' ? 2 : 1} gap={18}>
+        {weekly}
+        {history}
+      </Columns>
     </Page>
   );
 }

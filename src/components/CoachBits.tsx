@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
-import { agoLabel } from '@/data/format';
+import { agoLabel, CHANGE_LABELS } from '@/data/format';
 import { useLookups, useStore } from '@/data/store';
-import type { PainReport, SessionLog } from '@/data/types';
+import type { PainReport, SessionLog, WeeklyCheckIn } from '@/data/types';
+import { WEEKLY_QUESTIONS } from '@/data/weekly';
 import { fonts, radius } from '@/theme';
 import { BodyOutline } from './BodyMap';
 import { FeelRow, ReplyBubble, useHardList } from './ClientBits';
@@ -125,6 +126,7 @@ export function CheckInItem({ log, showClient = true }: { log: SessionLog; showC
         {ci?.hardNote ? <Body>{ci.hardNote}</Body> : null}
         {ci?.forTrainer ? <Body>{ci.forTrainer}</Body> : null}
         {hard.length ? <Tag label={`Found hard: ${hard.join(', ')}`} tone="warn" /> : null}
+        <ChangesList log={log} />
         {replies.map((r) => (
           <ReplyBubble key={r.id} text={r.text} at={r.at} />
         ))}
@@ -134,6 +136,65 @@ export function CheckInItem({ log, showClient = true }: { log: SessionLog; showC
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             <Button small variant="ghost" icon="send" title="Reply" onPress={() => setReplying(true)} />
             {!log.seenByTrainer ? <Button small variant="ghost" icon="check" title="Seen" onPress={() => st.markLogSeen(log.id)} /> : null}
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+// What the client changed mid-session: lighter weight, a different variation, an issue.
+export function ChangesList({ log }: { log: SessionLog }) {
+  const { exercise } = useLookups();
+  const { c } = useUI();
+  if (!log.changes?.length) return null;
+  return (
+    <View style={{ gap: 6, backgroundColor: c.warnSoft, borderRadius: radius.md, padding: 12 }}>
+      <Small color={c.ink} style={{ fontFamily: fonts.bold }}>Changed during the session</Small>
+      {log.changes.map((ch) => (
+        <View key={ch.exerciseId} style={{ gap: 2 }}>
+          <BodyBold>{exercise(ch.exerciseId).name}</BodyBold>
+          <Small color={c.ink}>
+            {ch.kinds.map((k) => CHANGE_LABELS[k]).join(', ')}
+            {ch.weightUsed ? ` · used ${ch.weightUsed}` : ''}
+          </Small>
+          {ch.note ? <Body>{ch.note}</Body> : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function WeeklyItem({ w, showClient = true }: { w: WeeklyCheckIn; showClient?: boolean }) {
+  const st = useStore();
+  const { client } = useLookups();
+  const { c } = useUI();
+  const who = client(w.clientId);
+  const label = (v: string | number, q: (typeof WEEKLY_QUESTIONS)[number]) => (q.kind === 'scale' ? `${v} out of 5` : q.kind === 'number' ? `${v} ${q.unit}` : String(v));
+  return (
+    <View style={{ flexDirection: 'row', gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: c.line }}>
+      {showClient ? <Avatar initials={who.initials} size={42} /> : null}
+      <View style={{ flex: 1, gap: 8, minWidth: 0 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+          <Pressable onPress={() => router.navigate(`/coach/clients/${who.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+            {!w.seenByTrainer ? <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: c.brand }} accessibilityLabel="New" /> : null}
+            <BodyBold>{showClient ? `${who.firstName} ${who.lastName}, weekly check-in` : `Week ending ${w.dateLabel}`}</BodyBold>
+          </Pressable>
+          <Small>{w.minutesAgo < 1440 ? agoLabel(w.minutesAgo) : w.dateLabel}</Small>
+        </View>
+        {WEEKLY_QUESTIONS.map((q) => {
+          const a = w.answers.find((x) => x.questionId === q.id);
+          if (a === undefined || a.value === '') return null;
+          return (
+            <View key={q.id} style={{ gap: 0 }}>
+              <Small>{q.label}</Small>
+              <BodyBold>{label(a.value, q)}</BodyBold>
+            </View>
+          );
+        })}
+        {!w.seenByTrainer ? (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button small variant="ghost" icon="check" title="Seen" onPress={() => st.markWeeklySeen(w.id)} />
           </View>
         ) : null}
       </View>

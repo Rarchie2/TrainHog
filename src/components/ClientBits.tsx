@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 import { APP_NAME } from '@/config';
 import { useLookups } from '@/data/store';
 import type { Assignment, Session, SessionLog } from '@/data/types';
@@ -7,11 +7,14 @@ import { fonts, radius, TOUCH } from '@/theme';
 import { Icon } from './Icon';
 import {
   Avatar,
+  Body,
   BodyBold,
+  Button,
   Card,
   CATEGORY_ICON,
   Face,
   FEEL_LABELS,
+  H2,
   IconBadge,
   LevelBars,
   Mark,
@@ -153,4 +156,46 @@ export function FeelRow({ log }: { log: SessionLog }) {
 export function useHardList(log: SessionLog) {
   const { exercise } = useLookups();
   return (log.checkIn?.hardExerciseIds ?? []).map((id) => exercise(id).name);
+}
+
+// Weekly check-in: a card on Today, plus a pop-up the first time the app opens
+// while it's due. On the phone build this becomes a push notification too.
+export function WeeklyCard() {
+  return (
+    <Card tone="soft">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <IconBadge name="cal" size={44} />
+        <View style={{ flex: 1 }}>
+          <BodyBold>Your weekly check-in is ready</BodyBold>
+          <Small>8 quick questions for Hogan, about 2 minutes</Small>
+        </View>
+      </View>
+      <Button small icon="chat" title="Start weekly check-in" onPress={() => router.navigate('/weekly')} />
+    </Card>
+  );
+}
+
+export function WeeklyPrompt({ visible, onLater }: { visible: boolean; onLater: () => void }) {
+  const { c } = useUI();
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onLater}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(15,26,46,0.45)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <View style={{ width: '100%', maxWidth: 420, backgroundColor: c.surface, borderRadius: 22, padding: 22, gap: 14 }} accessibilityViewIsModal>
+          <IconBadge name="bell" size={52} />
+          <H2>Time for your weekly check-in</H2>
+          <Body>Hogan uses this to tweak your plan for next week. It's 8 quick questions and takes about 2 minutes.</Body>
+          <Button
+            full
+            icon="chat"
+            title="Start now"
+            onPress={() => {
+              onLater();
+              router.navigate('/weekly');
+            }}
+          />
+          <Button full variant="ghost" title="Later" onPress={onLater} />
+        </View>
+      </View>
+    </Modal>
+  );
 }

@@ -7,7 +7,7 @@ import { useStore } from '@/data/store';
 export default function TrainerLayout() {
   const st = useStore();
   useEffect(() => st.setRole('trainer'), [st.setRole]);
-  const unread = st.pain.filter((p) => p.status === 'new').length + st.logs.filter((l) => l.checkIn && !l.seenByTrainer).length;
+  const unread = st.pain.filter((p) => p.status === 'new').length + st.logs.filter((l) => l.checkIn && !l.seenByTrainer).length + st.weekly.filter((w) => !w.seenByTrainer).length;
   const active = st.clients.filter((c) => c.invite === 'joined').length;
   return (
     <Shell

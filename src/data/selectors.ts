@@ -27,6 +27,8 @@ export function useClientData(clientId: ID) {
     const diary = s.diary.filter((d) => d.clientId === clientId);
     const pain = s.pain.filter((p) => p.clientId === clientId);
     const messages = s.messages.filter((m) => m.clientId === clientId);
+    const weekly = s.weekly.filter((w) => w.clientId === clientId).sort((a, b) => a.minutesAgo - b.minutesAgo);
+    const weeklyDue = !weekly[0] || weekly[0].minutesAgo >= 6 * 1440;
     const todayName = DAY_NAMES[new Date().getDay()];
     const todayIso = isoDate(new Date());
 
@@ -73,6 +75,6 @@ export function useClientData(clientId: ID) {
       else if (w > 0) break;
     }
 
-    return { mySessions, logs, diary, pain, messages, planned, doneToday, missingCheckIn, week, plannedThisWeek, doneThisWeek, categories, streak };
-  }, [s.assignments, s.sessions, s.logs, s.diary, s.pain, s.messages, clientId]);
+    return { mySessions, logs, diary, pain, messages, weekly, weeklyDue, planned, doneToday, missingCheckIn, week, plannedThisWeek, doneThisWeek, categories, streak };
+  }, [s.assignments, s.sessions, s.logs, s.diary, s.pain, s.messages, s.weekly, clientId]);
 }

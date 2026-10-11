@@ -2,34 +2,13 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Icon } from '@/components/Icon';
+import { NumbersEditor } from '@/components/NumbersEditor';
 import { Body, BodyBold, Button, Card, Chip, H3, Page, Small, Tag, Thumb, Title, useLayout, useUI } from '@/components/ui';
 import { useStore } from '@/data/store';
 import type { Category, SessionExercise } from '@/data/types';
 import { fonts, radius, TOUCH } from '@/theme';
 
 const CATEGORIES: Category[] = ['Strength', 'Mobility', 'Cardio', 'Rehab', 'Warm-ups', 'Home workouts', 'Balance'];
-
-function Stepper({ label, value, onChange, step = 1, min = 0, suffix = '' }: { label: string; value: number; onChange: (n: number) => void; step?: number; min?: number; suffix?: string }) {
-  const { c } = useUI();
-  const btn = (txt: string, d: number) => (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${txt === '+' ? 'More' : 'Less'} ${label}`} onPress={() => onChange(Math.max(min, value + d))} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontFamily: fonts.heavy, fontSize: 18, color: c.ink }}>{txt}</Text>
-    </Pressable>
-  );
-  return (
-    <View style={{ gap: 4 }}>
-      <Small>{label}</Small>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        {btn('−', -step)}
-        <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: c.ink, minWidth: 54, textAlign: 'center' }}>
-          {value}
-          {suffix}
-        </Text>
-        {btn('+', step)}
-      </View>
-    </View>
-  );
-}
 
 // Hogan picks exercises from his library, sets the numbers and assigns it.
 export default function NewSession() {
@@ -106,12 +85,7 @@ export default function NewSession() {
                   <Icon name="x" size={20} color={c.muted} />
                 </Pressable>
               </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18 }}>
-                <Stepper label="Sets" value={x.sets} min={1} onChange={(n) => update(i, { sets: n })} />
-                <Stepper label="Reps" value={Number(x.reps ?? 10)} min={1} onChange={(n) => update(i, { reps: String(n) })} />
-                <Stepper label="Rest" value={x.restSec} step={15} suffix="s" onChange={(n) => update(i, { restSec: n })} />
-              </View>
-              <TextInput value={x.note ?? ''} onChangeText={(t) => update(i, { note: t || undefined })} placeholder="Note for the client (optional)" placeholderTextColor={c.muted} style={input} accessibilityLabel={`Note for ${e.name}`} />
+              <NumbersEditor x={x} name={e.name} onChange={(patch) => update(i, patch)} />
             </View>
           );
         })}

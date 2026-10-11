@@ -7,16 +7,24 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import * as seed from './sample';
 import type {
   Assignment,
+  BodyweightEntry,
   CheckIn,
   Client,
+  CommunityPost,
   DiaryEntry,
   Exercise,
+  ExerciseChange,
   ID,
+  InPersonSession,
+  LiftEntry,
   Message,
   PainReport,
   Reply,
   Session,
+  SessionExercise,
   SessionLog,
+  WeeklyAnswer,
+  WeeklyCheckIn,
 } from './types';
 
 type Role = 'client' | 'trainer';
@@ -34,6 +42,12 @@ type State = {
   diary: DiaryEntry[];
   replies: Reply[];
   messages: Message[];
+  bodyweights: BodyweightEntry[];
+  lifts: LiftEntry[];
+  weekly: WeeklyCheckIn[];
+  posts: CommunityPost[];
+  inPerson: InPersonSession[];
+  weeklyPromptDismissed: boolean;
 };
 
 let counter = 100;
@@ -53,6 +67,12 @@ function initialState(): State {
     diary: seed.diaryEntries,
     replies: seed.replies,
     messages: seed.messages,
+    bodyweights: seed.bodyweights,
+    lifts: seed.lifts,
+    weekly: seed.weeklyCheckIns,
+    posts: seed.communityPosts,
+    inPerson: seed.inPerson,
+    weeklyPromptDismissed: false,
   };
 }
 
@@ -62,7 +82,14 @@ type Actions = {
   setRole: (r: Role) => void;
   setClient: (id: ID) => void;
   setEasyView: (clientId: ID, on: boolean) => void;
-  finishSession: (sessionId: ID, completedExerciseIds: ID[]) => ID;
+  finishSession: (sessionId: ID, completedExerciseIds: ID[], changes?: ExerciseChange[]) => ID;
+  submitWeekly: (answers: WeeklyAnswer[]) => void;
+  markWeeklySeen: (id: ID) => void;
+  dismissWeeklyPrompt: () => void;
+  setCommunity: (clientId: ID, on: boolean) => void;
+  post: (presetId: string, detail?: string) => void;
+  react: (postId: ID, emoji: string) => void;
+  setPlan: (assignmentId: ID, plan: SessionExercise[]) => void;
   submitCheckIn: (logId: ID, checkIn: CheckIn, pain?: PainInput) => void;
   addDiary: (text: string) => void;
   markLogSeen: (logId: ID) => void;
@@ -89,7 +116,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const finishSession = useCallback((sessionId: ID, completedExerciseIds: ID[]) => {
+  const finishSession = useCallback((sessionId: ID, completedExerciseIds: ID[], changes?: ExerciseChange[]) => {
     const id = newId('l');
     set((s) => ({
       ...s,
@@ -101,6 +128,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           date: seed.isoDate(new Date()),
           dateLabel: 'Today',
           completedExerciseIds,
+          changes: changes?.length ? changes : undefined,
           seenByTrainer: false,
           minutesAgo: 0,
         },
@@ -216,6 +244,55 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       })),
     [],
   );
+  const submitWeekly = useCallback(
+    (answers: WeeklyAnswer[]) =>
+      set((s) => {
+        const today = seed.isoDate(new Date());
+        const kg = Number(answers.find((a) => a.questionId === 'weight')?.value);
+        return {
+          ...s,
+          weeklyPromptDismissed: true,
+          weekly: [{ id: newId('w'), clientId: s.clientId, date: today, dateLabel: 'Today', answers, seenByTrainer: false, minutesAgo: 0 }, ...s.weekly],
+          bodyweights: kg > 0 ? [...s.bodyweights.filter((b) => !(b.clientId === s.clientId && b.date === today)), { clientId: s.clientId, date: today, kg }] : s.bodyweights,
+        };
+      }),
+    [],
+  );
+  const markWeeklySeen = useCallback(
+    (id: ID) => set((s) => ({ ...s, weekly: s.weekly.map((w) => (w.id === id ? { ...w, seenByTrainer: true } : w)) })),
+    [],
+  );
+  const dismissWeeklyPrompt = useCallback(() => set((s) => ({ ...s, weeklyPromptDismissed: true })), []);
+  const setCommunity = useCallback(
+    (clientId: ID, on: boolean) => set((s) => ({ ...s, clients: s.clients.map((c) => (c.id === clientId ? { ...c, community: on } : c)) })),
+    [],
+  );
+  const post = useCallback(
+    (presetId: string, detail?: string) =>
+      set((s) => ({
+        ...s,
+        posts: [{ id: newId('cp'), clientId: s.clientId, presetId, detail, at: 'Just now', minutesAgo: 0, reactions: {} }, ...s.posts],
+      })),
+    [],
+  );
+  const react = useCallback(
+    (postId: ID, emoji: string) =>
+      set((s) => ({
+        ...s,
+        posts: s.posts.map((p) => {
+          if (p.id !== postId) return p;
+          const who = p.reactions[emoji] ?? [];
+          const next = who.includes(s.clientId) ? who.filter((x) => x !== s.clientId) : [...who, s.clientId];
+          return { ...p, reactions: { ...p.reactions, [emoji]: next } };
+        }),
+      })),
+    [],
+  );
+  const setPlan = useCallback(
+    (assignmentId: ID, plan: SessionExercise[]) =>
+      set((s) => ({ ...s, assignments: s.assignments.map((a) => (a.id === assignmentId ? { ...a, plan, isNew: true } : a)) })),
+    [],
+  );
   const reset = useCallback(() => set(initialState()), []);
 
   const value = useMemo(
@@ -235,9 +312,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       saveSession,
       assign,
       addClient,
+      submitWeekly,
+      markWeeklySeen,
+      dismissWeeklyPrompt,
+      setCommunity,
+      post,
+      react,
+      setPlan,
       reset,
     }),
-    [st, setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage, toggleFavourite, saveSession, assign, addClient, reset],
+    [st, setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage, toggleFavourite, saveSession, assign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt, setCommunity, post, react, setPlan, reset],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -256,8 +340,13 @@ export function useLookups() {
     const session = (id: ID) => s.sessions.find((x) => x.id === id)!;
     const client = (id: ID) => s.clients.find((c) => c.id === id)!;
     const repliesFor = (id: ID) => s.replies.filter((r) => r.targetId === id);
-    return { exercise, session, client, repliesFor };
-  }, [s.exercises, s.sessions, s.clients, s.replies]);
+    // The session as this client should do it: Hogan's per-client numbers if he set them.
+    const planFor = (clientId: ID, sessionId: ID): SessionExercise[] => {
+      const a = s.assignments.find((x) => x.clientId === clientId && x.sessionId === sessionId);
+      return a?.plan ?? session(sessionId)?.exercises ?? [];
+    };
+    return { exercise, session, client, repliesFor, planFor };
+  }, [s.exercises, s.sessions, s.clients, s.replies, s.assignments]);
 }
 
 export function useMe() {

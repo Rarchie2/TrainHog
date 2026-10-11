@@ -14,6 +14,7 @@ export default function ClientLayout() {
       items={[
         { href: '/', label: 'Today', icon: 'home' },
         { href: '/sessions', label: 'My sessions', icon: 'grid', match: (p) => p.startsWith('/sessions') },
+        { href: '/community', label: 'Community', icon: 'users' },
         { href: '/diary', label: 'Diary', icon: 'book' },
         { href: '/me', label: 'Me', icon: 'user' },
       ]}

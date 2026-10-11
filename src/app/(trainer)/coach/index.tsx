@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
-import { CheckInItem, PainCard } from '@/components/CoachBits';
+import { Pressable, Text, View } from 'react-native';
+import { CheckInItem, PainCard, WeeklyItem } from '@/components/CoachBits';
 import { Icon } from '@/components/Icon';
 import { Avatar, BodyBold, Button, Card, Eyebrow, Mark, Page, SectionHead, Small, Tag, Title, useLayout, useUI } from '@/components/ui';
-import { DAY_NAMES, longDate } from '@/data/sample';
+import { DAY_NAMES, isoDate, longDate } from '@/data/sample';
 import { greeting } from '@/data/selectors';
 import { useLookups, useStore } from '@/data/store';
 import { fonts } from '@/theme';
@@ -28,12 +28,61 @@ export default function Inbox() {
   const due = st.assignments.filter((a) => a.days.includes(today) || a.days.includes('Daily'));
   const invites = st.clients.filter((x) => x.invite === 'sent' || x.invite === 'guardian-sent');
 
+  const todayIso = isoDate(new Date());
+  const inPersonToday = st.inPerson.filter((x) => x.date === todayIso).sort((a, b) => a.time.localeCompare(b.time));
+  const weeklies = st.weekly.filter((w) => !w.seenByTrainer).sort((a, b) => a.minutesAgo - b.minutesAgo);
+
   const kpis = [
     { n: openPain.length, label: openPain.length === 1 ? 'Pain report' : 'Pain reports', alert: openPain.length > 0 },
-    { n: newCount, label: 'New check-ins' },
+    { n: newCount + weeklies.length, label: 'New check-ins' },
     { n: `${trainedThisWeek}`, of: ` of ${joined.length}`, label: 'Trained this week' },
     { n: quiet.length, label: 'Quiet for 7+ days' },
   ];
+
+  const inPersonCard = inPersonToday.length ? (
+    <Card>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Icon name="users" size={20} color={c.brand} />
+        <BodyBold style={{ flex: 1 }}>In person today</BodyBold>
+        <Small>Tap to see their last week</Small>
+      </View>
+      <View style={{ flexDirection: size === 'compact' ? 'column' : 'row', flexWrap: 'wrap', gap: 10 }}>
+        {inPersonToday.map((x) => {
+          const who = st.clients.find((y) => y.id === x.clientId)!;
+          return (
+            <Pressable
+              key={x.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${who.firstName} is in person today at ${x.time}. Open their last week of training.`}
+              onPress={() => router.navigate(`/coach/clients/${who.id}/week`)}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 14, backgroundColor: c.brandSoft, flexGrow: 1, flexBasis: size === 'compact' ? undefined : 240, opacity: pressed ? 0.85 : 1 })}
+            >
+              <Text style={{ fontFamily: fonts.displayHeavy, fontSize: 20, color: c.brand, fontVariant: ['tabular-nums'], minWidth: 58 }}>{x.time}</Text>
+              <View style={{ flex: 1 }}>
+                <BodyBold>
+                  {who.firstName} {who.lastName}
+                </BodyBold>
+                <Small>{x.place}</Small>
+              </View>
+              <Icon name="chev" size={20} color={c.brand} />
+            </Pressable>
+          );
+        })}
+      </View>
+    </Card>
+  ) : null;
+
+  const weeklyCard = weeklies.length ? (
+    <Card>
+      <SectionHead title="Weekly check-ins" />
+      <Small style={{ marginTop: -10 }}>{weeklies.length} new</Small>
+      <View>
+        {weeklies.map((w) => (
+          <WeeklyItem key={w.id} w={w} />
+        ))}
+      </View>
+    </Card>
+  ) : null;
 
   const feed = (
     <Card>
@@ -136,6 +185,8 @@ export default function Inbox() {
         </View>
       </View>
 
+      {inPersonCard}
+
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
         {kpis.map((k) => (
           <View
@@ -161,6 +212,7 @@ export default function Inbox() {
           {openPain.map((p) => (
             <PainCard key={p.id} report={p} />
           ))}
+          {weeklyCard}
           {feed}
           {side}
           {seenPain.map((p) => (
@@ -173,6 +225,7 @@ export default function Inbox() {
             {openPain.map((p) => (
               <PainCard key={p.id} report={p} />
             ))}
+            {weeklyCard}
             {feed}
             {seenPain.map((p) => (
               <PainCard key={p.id} report={p} />

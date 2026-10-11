@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AREAS, BodyOutline } from '@/components/BodyMap';
+import { SharePrompt } from '@/components/Community';
 import { Icon } from '@/components/Icon';
 import { Body, BodyBold, Button, Card, Chip, Face, FEEL_LABELS, H2, H3, Small, Title, useLayout, useUI } from '@/components/ui';
-import { useLookups, useStore } from '@/data/store';
+import { useLookups, useMe, useStore } from '@/data/store';
 import type { Feel, PainReport } from '@/data/types';
 import { fonts, radius, TOUCH } from '@/theme';
 
@@ -15,7 +16,8 @@ const RED_FLAGS = ['I had a fall', 'Chest pain', 'Dizzy or faint', 'Very short o
 export default function CheckIn() {
   const { logId } = useLocalSearchParams<{ logId: string }>();
   const st = useStore();
-  const { session, exercise } = useLookups();
+  const { session, exercise, planFor } = useLookups();
+  const me = useMe();
   const { c, k } = useUI();
   const { size } = useLayout();
   const insets = useSafeAreaInsets();
@@ -42,7 +44,7 @@ export default function CheckIn() {
 
   if (!log) return null;
   const s = session(log.sessionId);
-  const exs = s.exercises.map((x) => exercise(x.exerciseId));
+  const exs = planFor(log.clientId, s.id).map((x) => exercise(x.exerciseId));
   const serious = (severity ?? 0) >= 7 || flags.length > 0;
   const painReady = !pain || (area && severity !== null);
   const canSend = feel !== null && effort !== null && pain !== null && painReady;
@@ -77,7 +79,7 @@ export default function CheckIn() {
 
   if (sent) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.bg, alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: insets.top + 24 }}>
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }}>
         <View style={{ maxWidth: 520, width: '100%', gap: 18, alignItems: 'center' }}>
           <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="check" size={44} color={c.brandInk} strokeWidth={2.6} />
@@ -89,12 +91,13 @@ export default function CheckIn() {
               : 'Nice work today. Hogan will see how it went and may leave you a note in your diary.'}
           </Body>
           {serious ? <SafetyBox /> : null}
+          {me.community && !pain ? <SharePrompt sessionName={s.name} /> : null}
           <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
             <Button title="Back to Today" icon="home" onPress={() => router.replace('/')} />
             <Button variant="ghost" title="Open my diary" icon="book" onPress={() => router.replace('/diary')} />
           </View>
         </View>
-      </View>
+      </ScrollView>
     );
   }
 

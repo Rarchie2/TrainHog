@@ -99,13 +99,24 @@ src/
 - [ ] The exact check-in questions (`src/app/checkin/[logId].tsx`)
 - [ ] Whether check-ins alert him instantly or as a daily summary
 - [ ] Whether he films his own videos or starts from a library
+- [ ] His weekly check-in questions (placeholders in `src/data/weekly.ts`)
+- [ ] His real in-person diary (sample bookings in `inPerson`, `src/data/sample.ts`; later synced from his calendar)
+
+## Added after the 11 October meeting
+
+- Hogan sets each client's own sets, reps, weight and rest per session (client page, "Set numbers"), plus an "if they're struggling" tip per exercise.
+- Clients tap "Struggling?" mid-workout for the tip, and "Note a change" to log a lighter weight, a different variation or an issue. Hogan sees these in the check-in.
+- Weekly check-in form with a pop-up on the Today screen when it's due.
+- Progress graphs on the client page: bodyweight against their goal and top weight per lift, across the plan's weeks.
+- Opt-in community feed with emoji posts and reactions. No free text.
+- "In person today" on Hogan's inbox. Tapping a client opens their last 7 days.
 
 ## Next build steps
 
 1. Backend: Supabase (London region) with row-level security per trainer business, as in the spec. Replace `src/data/store.tsx` with real queries.
 2. Sign-in: invite link, then magic link or SMS code. No passwords.
 3. Video: Mux or Cloudflare Stream, with offline downloads.
-4. Push notifications for pain reports (Expo push).
+4. Push notifications for pain reports and the weekly check-in reminder (Expo push).
 5. Voice notes with transcription.
 
 The spec lives here: https://claude.ai/code/artifact/b8d39e71-2914-4b9b-8847-9da5e7cf50d1

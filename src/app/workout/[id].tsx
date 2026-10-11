@@ -1,18 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, Vibration, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, Vibration, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
-import { Body, BodyBold, Button, Card, Eyebrow, H3, Small, Tag, Thumb, Title, useLayout, useUI } from '@/components/ui';
-import { prescription } from '@/data/format';
+import { Body, BodyBold, Button, Card, Chip, Eyebrow, H3, Small, Tag, Thumb, Title, useLayout, useUI } from '@/components/ui';
+import { CHANGE_LABELS, prescription } from '@/data/format';
 import { useLookups, useStore } from '@/data/store';
+import type { ChangeKind, ExerciseChange } from '@/data/types';
 import { fonts, radius, TOUCH } from '@/theme';
 
 // One exercise per screen, big Done and Skip buttons, and a rest timer.
 export default function Workout() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const st = useStore();
-  const { session, exercise } = useLookups();
+  const { session, exercise, planFor } = useLookups();
   const { c, k } = useUI();
   const { size } = useLayout();
   const insets = useSafeAreaInsets();
@@ -22,6 +23,8 @@ export default function Workout() {
   const [done, setDone] = useState<string[]>([]);
   const [resting, setResting] = useState(0);
   const [showSteps, setShowSteps] = useState(true);
+  const [changes, setChanges] = useState<Record<string, ExerciseChange>>({});
+  const [panel, setPanel] = useState<'none' | 'struggling' | 'change'>('none');
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -45,12 +48,13 @@ export default function Workout() {
   }, [resting > 0]);
 
   if (!s) return null;
-  const total = s.exercises.length;
-  const cur = s.exercises[i];
+  const plan = planFor(st.clientId, s.id);
+  const total = plan.length;
+  const cur = plan[i];
   const e = exercise(cur.exerciseId);
 
   const finish = (completed: string[]) => {
-    const logId = st.finishSession(s.id, completed);
+    const logId = st.finishSession(s.id, completed, Object.values(changes).filter((x) => x.kinds.length || x.note || x.weightUsed));
     router.replace(`/checkin/${logId}`);
   };
   const next = (markDone: boolean) => {
@@ -58,6 +62,7 @@ export default function Workout() {
     setDone(completed);
     if (i + 1 >= total) return finish(completed);
     setI(i + 1);
+    setPanel('none');
     if (markDone && cur.restSec > 0) setResting(cur.restSec);
   };
 
@@ -101,14 +106,61 @@ export default function Workout() {
     );
   }
 
+  const mine = changes[cur.exerciseId] ?? { exerciseId: cur.exerciseId, kinds: [] };
+  const updateMine = (patch: Partial<ExerciseChange>) => setChanges({ ...changes, [cur.exerciseId]: { ...mine, ...patch } });
+  const toggleKind = (kind: ChangeKind) => updateMine({ kinds: mine.kinds.includes(kind) ? mine.kinds.filter((x) => x !== kind) : [...mine.kinds, kind] });
+  const noted = mine.kinds.length > 0 || !!mine.note || !!mine.weightUsed;
+  const tip = cur.ifStruggling ?? (e.easier ? `Try the easier version: ${e.easier.toLowerCase()}.` : 'Take a longer rest, lower the weight a little, and do what you can with good form.');
+  const input = { minHeight: 48, borderWidth: 1.5, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, fontFamily: fonts.body, fontSize: 16, color: c.ink, backgroundColor: c.surface } as const;
+
+  const numbers = [
+    { label: 'Sets', value: String(cur.sets) },
+    { label: cur.reps ? 'Reps' : 'Time', value: cur.reps ?? cur.time ?? '-' },
+    { label: 'Weight', value: cur.weight ?? 'Body' },
+    { label: 'Rest', value: `${cur.restSec}s` },
+  ];
+
   const info = (
     <View style={{ gap: 14 }}>
       <Eyebrow color={c.brand}>{prescription(cur)}</Eyebrow>
       <Title>{e.name}</Title>
-      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-        <Tag label={`Rest ${cur.restSec} sec`} tone="neutral" icon="clock" />
-        {cur.note ? <Tag label={cur.note} tone="warn" /> : null}
+      <View style={{ flexDirection: 'row', gap: 8 }} accessibilityLabel={`From Hogan: ${prescription(cur)}, rest ${cur.restSec} seconds`}>
+        {numbers.map((n) => (
+          <View key={n.label} style={{ flex: 1, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', gap: 2 }}>
+            <Text style={{ fontFamily: fonts.displayHeavy, fontSize: Math.round(19 * k), color: c.ink, textAlign: 'center' }} numberOfLines={2}>
+              {n.value}
+            </Text>
+            <Small>{n.label}</Small>
+          </View>
+        ))}
       </View>
+      {cur.note ? <Tag label={cur.note} tone="warn" /> : null}
+      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+        <Button small variant={panel === 'struggling' ? 'primary' : 'ghost'} icon="alert" title="Struggling?" onPress={() => setPanel(panel === 'struggling' ? 'none' : 'struggling')} />
+        <Button small variant={panel === 'change' ? 'primary' : 'ghost'} icon={noted ? 'check' : 'plus'} title={noted ? 'Change noted' : 'Note a change'} onPress={() => setPanel(panel === 'change' ? 'none' : 'change')} />
+      </View>
+      {panel === 'struggling' ? (
+        <Card tone="warn">
+          <BodyBold>If you're struggling</BodyBold>
+          <Body>{tip}</Body>
+          <Small>Stop and tell Hogan if anything hurts.</Small>
+          <Button small variant="warn" title="I changed something" onPress={() => setPanel('change')} />
+        </Card>
+      ) : null}
+      {panel === 'change' ? (
+        <Card>
+          <BodyBold>What did you change?</BodyBold>
+          <Small>Hogan sees this with your check-in.</Small>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {(Object.keys(CHANGE_LABELS) as ChangeKind[]).map((kind) => (
+              <Chip key={kind} label={CHANGE_LABELS[kind]} on={mine.kinds.includes(kind)} onPress={() => toggleKind(kind)} />
+            ))}
+          </View>
+          <TextInput value={mine.weightUsed ?? ''} onChangeText={(t) => updateMine({ weightUsed: t || undefined })} placeholder={`Weight you used${cur.weight ? ` (Hogan set ${cur.weight})` : ''}`} placeholderTextColor={c.muted} style={input} accessibilityLabel="Weight you used" />
+          <TextInput value={mine.note ?? ''} onChangeText={(t) => updateMine({ note: t || undefined })} placeholder="Anything else? For example: knee twinged on set 2" placeholderTextColor={c.muted} multiline style={[input, { minHeight: 70, paddingTop: 10, textAlignVertical: 'top' }]} accessibilityLabel="Note for Hogan" />
+          <Button small icon="check" title="Save" onPress={() => setPanel('none')} />
+        </Card>
+      ) : null}
       <Card tone="soft">
         <BodyBold>Hogan says</BodyBold>
         <Body>{e.coachingNotes}</Body>
