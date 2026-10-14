@@ -23,6 +23,8 @@ export const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+export const ukDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
 export function daysAgo(n: number): Date {
   const d = new Date();
   d.setHours(9, 0, 0, 0);
@@ -276,12 +278,18 @@ export const lifts: LiftEntry[] = PROGRESS.flatMap((p, n) => {
 
 export const weeklyCheckIns: WeeklyCheckIn[] = [
   { id: 'w1', clientId: 'c3', date: isoDate(daysAgo(0)), dateLabel: 'Today', minutesAgo: 95, seenByTrainer: false, answers: [
-    { questionId: 'weight', value: 77.1 }, { questionId: 'energy', value: 4 }, { questionId: 'sleep', value: 3 }, { questionId: 'stress', value: 2 },
-    { questionId: 'food', value: 4 }, { questionId: 'sessions', value: 'All of them' }, { questionId: 'win', value: 'Rowed 16 kg for all three sets.' }, { questionId: 'note', value: 'Away next weekend, will do the hotel session.' },
+    { questionId: 'name', value: 'Tom Reid' }, { questionId: 'date', value: ukDate(daysAgo(0)) }, { questionId: 'weight', value: 77.1 },
+    { questionId: 'challenge', value: 7 }, { questionId: 'progress', value: 8 }, { questionId: 'nutrition', value: 7 }, { questionId: 'energy', value: 8 },
+    { questionId: 'sleep', value: 6 }, { questionId: 'recovery', value: 7 }, { questionId: 'painGym', value: 10 }, { questionId: 'painOutside', value: 9 },
+    { questionId: 'importance', value: 9 }, { questionId: 'motivation', value: 8 }, { questionId: 'wellbeing', value: 8 },
+    { questionId: 'feedback', value: 'Rowed 16 kg for all three sets. Away next weekend, will do the hotel session.' },
   ] },
   { id: 'w2', clientId: 'c1', date: isoDate(daysAgo(7)), dateLabel: relativeLabel(7), minutesAgo: 7 * 1440, seenByTrainer: true, answers: [
-    { questionId: 'weight', value: 70.3 }, { questionId: 'energy', value: 3 }, { questionId: 'sleep', value: 2 }, { questionId: 'stress', value: 4 },
-    { questionId: 'food', value: 3 }, { questionId: 'sessions', value: 'Most' }, { questionId: 'win', value: 'Walked 5 km with the dog.' }, { questionId: 'note', value: 'Busy week at work.' },
+    { questionId: 'name', value: 'Sarah Collins' }, { questionId: 'date', value: ukDate(daysAgo(7)) }, { questionId: 'weight', value: 70.3 },
+    { questionId: 'challenge', value: 6 }, { questionId: 'progress', value: 5 }, { questionId: 'nutrition', value: 5 }, { questionId: 'energy', value: 5 },
+    { questionId: 'sleep', value: 4 }, { questionId: 'recovery', value: 6 }, { questionId: 'painGym', value: 9 }, { questionId: 'painOutside', value: 10 },
+    { questionId: 'importance', value: 8 }, { questionId: 'motivation', value: 6 }, { questionId: 'wellbeing', value: 4 },
+    { questionId: 'feedback', value: 'Busy week at work. Walked 5 km with the dog.' },
   ] },
 ];
 

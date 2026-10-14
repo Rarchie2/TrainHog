@@ -6,16 +6,18 @@ import { Icon } from '@/components/Icon';
 import { Body, BodyBold, Button, Card, Chip, Small, Title, useUI } from '@/components/ui';
 import { useMe, useStore } from '@/data/store';
 import type { WeeklyAnswer } from '@/data/types';
-import { WEEKLY_QUESTIONS, type WeeklyQuestion } from '@/data/weekly';
+import { WEEKLY_INTRO, WEEKLY_QUESTIONS, WEEKLY_TITLE, type WeeklyQuestion } from '@/data/weekly';
 import { fonts, radius, TOUCH } from '@/theme';
 
 // The weekly check-in form. Questions come from src/data/weekly.ts.
+
+const todayLabel = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 export default function Weekly() {
   const st = useStore();
   const me = useMe();
   const { c } = useUI();
   const insets = useSafeAreaInsets();
-  const [answers, setAnswers] = useState<Record<string, string | number>>({});
+  const [answers, setAnswers] = useState<Record<string, string | number>>(() => ({ name: `${me.firstName} ${me.lastName}`, date: todayLabel() }));
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function Weekly() {
   }, [st.setRole]);
 
   const set = (id: string, v: string | number) => setAnswers({ ...answers, [id]: v });
-  const required = WEEKLY_QUESTIONS.filter((q) => q.kind !== 'text');
+  const required = WEEKLY_QUESTIONS.filter((q) => q.required);
   const missing = required.filter((q) => answers[q.id] === undefined || answers[q.id] === '').length;
 
   if (sent) {
@@ -49,18 +51,24 @@ export default function Weekly() {
         </Pressable>
         <View style={{ flex: 1 }}>
           <BodyBold>Weekly check-in</BodyBold>
-          <Small>About 2 minutes</Small>
+          <Small>About 3 minutes</Small>
         </View>
       </View>
       <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: insets.bottom + 30 }}>
         <View style={{ width: '100%', maxWidth: 680, alignSelf: 'center', gap: 16 }}>
+          <Card>
+            <BodyBold>{WEEKLY_TITLE}</BodyBold>
+            <Body>{WEEKLY_INTRO}</Body>
+          </Card>
           {WEEKLY_QUESTIONS.map((q, n) => (
             <Card key={q.id}>
               <Small>
                 {n + 1} of {WEEKLY_QUESTIONS.length}
-                {q.kind === 'text' ? ' · optional' : ''}
               </Small>
-              <BodyBold>{q.label}</BodyBold>
+              <BodyBold>
+                {q.label}
+                {q.required ? <Text style={{ color: c.bad }}> *</Text> : null}
+              </BodyBold>
               <Answer q={q} value={answers[q.id]} onChange={(v) => set(q.id, v)} />
             </Card>
           ))}
@@ -90,26 +98,28 @@ function Answer({ q, value, onChange }: { q: WeeklyQuestion; value: string | num
   if (q.kind === 'scale') {
     return (
       <View style={{ gap: 6 }}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {[1, 2, 3, 4, 5].map((n) => {
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {Array.from({ length: q.max }, (_, i) => i + 1).map((n) => {
             const on = value === n;
             return (
               <Pressable
                 key={n}
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={`${n} out of 5`}
+                accessibilityLabel={`${n} out of ${q.max}`}
                 onPress={() => onChange(n)}
-                style={{ flex: 1, minHeight: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? c.brand : c.surface2 }}
+                style={{ flexBasis: '17%', flexGrow: 1, minHeight: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? c.brand : c.surface2 }}
               >
                 <Text style={{ fontFamily: fonts.heavy, fontSize: Math.round(18 * k), color: on ? c.brandInk : c.ink }}>{n}</Text>
               </Pressable>
             );
           })}
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Small>{q.low}</Small>
-          <Small>{q.high}</Small>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+          <Small>1 · {q.low}</Small>
+          <Small style={{ textAlign: 'right' }}>
+            {q.max} · {q.high}
+          </Small>
         </View>
       </View>
     );
@@ -137,6 +147,20 @@ function Answer({ q, value, onChange }: { q: WeeklyQuestion; value: string | num
         />
         <BodyBold>{q.unit}</BodyBold>
       </View>
+    );
+  }
+  if (q.kind === 'short' || q.kind === 'date') {
+    return (
+      <TextInput
+        value={value === undefined ? '' : String(value)}
+        onChangeText={onChange}
+        placeholder={q.kind === 'date' ? 'DD/MM/YYYY' : 'Your answer'}
+        placeholderTextColor={c.muted}
+        keyboardType={q.kind === 'date' ? 'numbers-and-punctuation' : 'default'}
+        autoCapitalize={q.kind === 'short' ? 'words' : 'none'}
+        accessibilityLabel={q.label}
+        style={input}
+      />
     );
   }
   return (
