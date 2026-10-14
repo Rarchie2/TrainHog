@@ -27,6 +27,7 @@ import {
 import { longDate } from '@/data/sample';
 import { greeting, useClientData } from '@/data/selectors';
 import { useLookups, useMe, useStore } from '@/data/store';
+import { WEEKLY_COUNT } from '@/data/weekly';
 import { fonts, radius } from '@/theme';
 
 export default function Today() {
@@ -282,7 +283,7 @@ function EasyToday() {
     { icon: 'grid' as const, title: 'My sessions', sub: `${d.mySessions.length} sessions from Hogan`, href: '/sessions' },
     { icon: 'book' as const, title: 'My diary', sub: `${d.doneThisWeek} sessions this week`, href: '/diary' },
     { icon: 'chat' as const, title: 'Tell Hogan how I feel', sub: 'Including any pain', href: d.logs[0] ? `/checkin/${d.logs[0].id}` : '/diary' },
-    ...(d.weeklyDue ? [{ icon: 'cal' as const, title: 'Weekly check-in', sub: '8 quick questions', href: '/weekly' }] : []),
+    ...(d.weeklyDue ? [{ icon: 'cal' as const, title: 'Weekly check-in', sub: `${WEEKLY_COUNT} questions`, href: '/weekly' }] : []),
   ];
 
   return (

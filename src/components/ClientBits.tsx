@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { APP_NAME } from '@/config';
 import { useLookups } from '@/data/store';
+import { WEEKLY_COUNT } from '@/data/weekly';
 import type { Assignment, Session, SessionLog } from '@/data/types';
 import { fonts, radius, TOUCH } from '@/theme';
 import { Icon } from './Icon';
@@ -167,7 +168,7 @@ export function WeeklyCard() {
         <IconBadge name="cal" size={44} />
         <View style={{ flex: 1 }}>
           <BodyBold>Your weekly check-in is ready</BodyBold>
-          <Small>8 quick questions for Hogan, about 2 minutes</Small>
+          <Small>{WEEKLY_COUNT} questions for Hogan, about 3 minutes</Small>
         </View>
       </View>
       <Button small icon="chat" title="Start weekly check-in" onPress={() => router.navigate('/weekly')} />
@@ -183,7 +184,7 @@ export function WeeklyPrompt({ visible, onLater }: { visible: boolean; onLater: 
         <View style={{ width: '100%', maxWidth: 420, backgroundColor: c.surface, borderRadius: 22, padding: 22, gap: 14 }} accessibilityViewIsModal>
           <IconBadge name="bell" size={52} />
           <H2>Time for your weekly check-in</H2>
-          <Body>Hogan uses this to tweak your plan for next week. It's 8 quick questions and takes about 2 minutes.</Body>
+          <Body>Hogan uses this to tweak your plan for next week. It's {WEEKLY_COUNT} questions and takes about 3 minutes.</Body>
           <Button
             full
             icon="chat"

@@ -170,7 +170,7 @@ export function WeeklyItem({ w, showClient = true }: { w: WeeklyCheckIn; showCli
   const { client } = useLookups();
   const { c } = useUI();
   const who = client(w.clientId);
-  const label = (v: string | number, q: (typeof WEEKLY_QUESTIONS)[number]) => (q.kind === 'scale' ? `${v} out of 5` : q.kind === 'number' ? `${v} ${q.unit}` : String(v));
+  const label = (v: string | number, q: (typeof WEEKLY_QUESTIONS)[number]) => (q.kind === 'scale' ? `${v} out of ${q.max}` : q.kind === 'number' ? `${v} ${q.unit}` : String(v));
   return (
     <View style={{ flexDirection: 'row', gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: c.line }}>
       {showClient ? <Avatar initials={who.initials} size={42} /> : null}
