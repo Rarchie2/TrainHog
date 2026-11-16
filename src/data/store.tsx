@@ -3,7 +3,8 @@
 // straight away, the way the real backend will work.
 // TODO: replace with the real backend (Supabase in the spec) after Sunday.
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as seed from './sample';
 import type {
   Assignment,
@@ -47,8 +48,13 @@ type State = {
   weekly: WeeklyCheckIn[];
   posts: CommunityPost[];
   inPerson: InPersonSession[];
-  weeklyPromptDismissed: boolean;
+  // Kept on the phone between launches (the rest is demo data until the backend lands).
+  weeklyDoneOn: Record<ID, string>; // client -> ISO date of their last weekly check-in
+  weeklyPromptSeen: Record<ID, string>; // client -> check-in week the pop-up was last shown for
 };
+
+const SAVED_KEY = 'trainhog.saved.v1';
+type Saved = Pick<State, 'weeklyDoneOn' | 'weeklyPromptSeen'>;
 
 let counter = 100;
 const newId = (p: string) => `${p}${++counter}`;
@@ -72,7 +78,8 @@ function initialState(): State {
     weekly: seed.weeklyCheckIns,
     posts: seed.communityPosts,
     inPerson: seed.inPerson,
-    weeklyPromptDismissed: false,
+    weeklyDoneOn: {},
+    weeklyPromptSeen: {},
   };
 }
 
@@ -85,7 +92,7 @@ type Actions = {
   finishSession: (sessionId: ID, completedExerciseIds: ID[], changes?: ExerciseChange[]) => ID;
   submitWeekly: (answers: WeeklyAnswer[]) => void;
   markWeeklySeen: (id: ID) => void;
-  dismissWeeklyPrompt: () => void;
+  dismissWeeklyPrompt: (weekStart: string) => void;
   setCommunity: (clientId: ID, on: boolean) => void;
   post: (presetId: string, detail?: string) => void;
   react: (postId: ID, emoji: string) => void;
@@ -97,8 +104,10 @@ type Actions = {
   reply: (targetId: ID, text: string) => void;
   sendMessage: (clientId: ID, text: string) => void;
   toggleFavourite: (assignmentId: ID) => void;
-  saveSession: (session: Omit<Session, 'id' | 'businessId' | 'updated'>, assignTo: ID[]) => ID;
-  assign: (clientId: ID, sessionId: ID) => void;
+  saveSession: (session: Omit<Session, 'id' | 'businessId' | 'updated'>, assignTo: ID[], days?: string[]) => ID;
+  assign: (clientId: ID, sessionId: ID, days?: string[]) => void;
+  setDays: (assignmentId: ID, days: string[]) => void;
+  unassign: (assignmentId: ID) => void;
   addClient: (firstName: string, lastName: string, contact: string, easyView: boolean) => void;
   reset: () => void;
 };
@@ -107,6 +116,27 @@ const Ctx = createContext<(State & Actions) | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [st, set] = useState<State>(initialState);
+
+  // Load and save the few things that must survive closing the app.
+  const loaded = useRef(false);
+  useEffect(() => {
+    AsyncStorage.getItem(SAVED_KEY)
+      .then((raw) => {
+        if (raw) {
+          const saved = JSON.parse(raw) as Partial<Saved>;
+          set((s) => ({ ...s, weeklyDoneOn: { ...s.weeklyDoneOn, ...saved.weeklyDoneOn }, weeklyPromptSeen: { ...s.weeklyPromptSeen, ...saved.weeklyPromptSeen } }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        loaded.current = true;
+      });
+  }, []);
+  useEffect(() => {
+    if (!loaded.current) return;
+    const saved: Saved = { weeklyDoneOn: st.weeklyDoneOn, weeklyPromptSeen: st.weeklyPromptSeen };
+    AsyncStorage.setItem(SAVED_KEY, JSON.stringify(saved)).catch(() => {});
+  }, [st.weeklyDoneOn, st.weeklyPromptSeen]);
 
   const setRole = useCallback((role: Role) => set((s) => ({ ...s, role })), []);
   const setClient = useCallback((clientId: ID) => set((s) => ({ ...s, clientId })), []);
@@ -196,27 +226,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       })),
     [],
   );
-  const saveSession = useCallback((session: Omit<Session, 'id' | 'businessId' | 'updated'>, assignTo: ID[]) => {
+  const saveSession = useCallback((session: Omit<Session, 'id' | 'businessId' | 'updated'>, assignTo: ID[], days: string[] = []) => {
     const id = newId('s');
     set((s) => ({
       ...s,
       sessions: [...s.sessions, { ...session, id, businessId: 'b1', updated: 'Just now' }],
       assignments: [
         ...s.assignments,
-        ...assignTo.map((clientId) => ({ id: newId('a'), clientId, sessionId: id, days: [], isNew: true })),
+        ...assignTo.map((clientId) => ({ id: newId('a'), clientId, sessionId: id, days, isNew: true })),
       ],
     }));
     return id;
   }, []);
-  const assign = useCallback(
-    (clientId: ID, sessionId: ID) =>
-      set((s) =>
-        s.assignments.some((a) => a.clientId === clientId && a.sessionId === sessionId)
-          ? s
-          : { ...s, assignments: [...s.assignments, { id: newId('a'), clientId, sessionId, days: [], isNew: true }] },
-      ),
+  // Assigning a session the client already has just updates its days.
+  const assign = useCallback((clientId: ID, sessionId: ID, days: string[] = []) => {
+    const id = newId('a');
+    set((s) => {
+      const existing = s.assignments.find((a) => a.clientId === clientId && a.sessionId === sessionId);
+      if (existing) {
+        return { ...s, assignments: s.assignments.map((a) => (a.id === existing.id ? { ...a, days, isNew: true } : a)) };
+      }
+      return { ...s, assignments: [...s.assignments, { id, clientId, sessionId, days, isNew: true }] };
+    });
+  }, []);
+  const setDays = useCallback(
+    (assignmentId: ID, days: string[]) => set((s) => ({ ...s, assignments: s.assignments.map((a) => (a.id === assignmentId ? { ...a, days } : a)) })),
     [],
   );
+  const unassign = useCallback((assignmentId: ID) => set((s) => ({ ...s, assignments: s.assignments.filter((a) => a.id !== assignmentId) })), []);
   const addClient = useCallback(
     (firstName: string, lastName: string, contact: string, easyView: boolean) =>
       set((s) => ({
@@ -251,7 +288,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const kg = Number(answers.find((a) => a.questionId === 'weight')?.value);
         return {
           ...s,
-          weeklyPromptDismissed: true,
+          weeklyDoneOn: { ...s.weeklyDoneOn, [s.clientId]: today },
           weekly: [{ id: newId('w'), clientId: s.clientId, date: today, dateLabel: 'Today', answers, seenByTrainer: false, minutesAgo: 0 }, ...s.weekly],
           bodyweights: kg > 0 ? [...s.bodyweights.filter((b) => !(b.clientId === s.clientId && b.date === today)), { clientId: s.clientId, date: today, kg }] : s.bodyweights,
         };
@@ -262,7 +299,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (id: ID) => set((s) => ({ ...s, weekly: s.weekly.map((w) => (w.id === id ? { ...w, seenByTrainer: true } : w)) })),
     [],
   );
-  const dismissWeeklyPrompt = useCallback(() => set((s) => ({ ...s, weeklyPromptDismissed: true })), []);
+  const dismissWeeklyPrompt = useCallback(
+    (weekStart: string) => set((s) => ({ ...s, weeklyPromptSeen: { ...s.weeklyPromptSeen, [s.clientId]: weekStart } })),
+    [],
+  );
   const setCommunity = useCallback(
     (clientId: ID, on: boolean) => set((s) => ({ ...s, clients: s.clients.map((c) => (c.id === clientId ? { ...c, community: on } : c)) })),
     [],
@@ -311,6 +351,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       toggleFavourite,
       saveSession,
       assign,
+      setDays,
+      unassign,
       addClient,
       submitWeekly,
       markWeeklySeen,
@@ -321,7 +363,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setPlan,
       reset,
     }),
-    [st, setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage, toggleFavourite, saveSession, assign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt, setCommunity, post, react, setPlan, reset],
+    [st, setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage, toggleFavourite, saveSession, assign, setDays, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt, setCommunity, post, react, setPlan, reset],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

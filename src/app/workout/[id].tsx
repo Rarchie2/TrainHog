@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, TextInput, Vibration, View } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Body, BodyBold, Button, Card, Chip, Eyebrow, H3, Small, Tag, Thumb, Title, useLayout, useUI } from '@/components/ui';
-import { CHANGE_LABELS, prescription } from '@/data/format';
+import { CHANGE_LABELS, holdSeconds, prescription } from '@/data/format';
 import { useLookups, useStore } from '@/data/store';
 import type { ChangeKind, ExerciseChange } from '@/data/types';
 import { fonts, radius, TOUCH } from '@/theme';
@@ -19,9 +19,13 @@ export default function Workout() {
   const insets = useSafeAreaInsets();
   const s = session(id);
 
-  const [i, setI] = useState(0);
+  // The client can do exercises in any order (busy gyms): `queue` holds the
+  // plan positions still to do, and the first one is on screen.
+  const [queue, setQueue] = useState<number[] | null>(null);
   const [done, setDone] = useState<string[]>([]);
   const [resting, setResting] = useState(0);
+  const [holding, setHolding] = useState(0);
+  const [picking, setPicking] = useState(false);
   const [showSteps, setShowSteps] = useState(true);
   const [changes, setChanges] = useState<Record<string, ExerciseChange>>({});
   const [panel, setPanel] = useState<'none' | 'struggling' | 'change'>('none');
@@ -47,11 +51,30 @@ export default function Workout() {
     };
   }, [resting > 0]);
 
+  // Countdown for timed holds (planks, wall sits and other isometrics).
+  useEffect(() => {
+    if (holding <= 0) return;
+    const t = setInterval(() => {
+      setHolding((h) => {
+        if (h <= 1) {
+          Vibration.vibrate([0, 300, 150, 300]);
+          return 0;
+        }
+        return h - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [holding > 0]);
+
   if (!s) return null;
   const plan = planFor(st.clientId, s.id);
   const total = plan.length;
-  const cur = plan[i];
+  const q = queue ?? plan.map((_, n) => n);
+  if (!q.length) return null;
+  const cur = plan[q[0]];
   const e = exercise(cur.exerciseId);
+  const position = total - q.length; // how many are finished or skipped
+  const secs = holdSeconds(cur);
 
   const finish = (completed: string[]) => {
     const logId = st.finishSession(s.id, completed, Object.values(changes).filter((x) => x.kinds.length || x.note || x.weightUsed));
@@ -60,10 +83,23 @@ export default function Workout() {
   const next = (markDone: boolean) => {
     const completed = markDone ? [...done, cur.exerciseId] : done;
     setDone(completed);
-    if (i + 1 >= total) return finish(completed);
-    setI(i + 1);
+    if (q.length <= 1) return finish(completed);
+    setQueue(q.slice(1));
     setPanel('none');
+    setHolding(0);
     if (markDone && cur.restSec > 0) setResting(cur.restSec);
+  };
+  // Equipment taken? Push this one to the end, or jump to any other.
+  const later = () => {
+    setQueue([...q.slice(1), q[0]]);
+    setPanel('none');
+    setHolding(0);
+  };
+  const jumpTo = (pos: number) => {
+    setQueue([pos, ...q.filter((x) => x !== pos)]);
+    setPicking(false);
+    setPanel('none');
+    setHolding(0);
   };
 
   const topBar = (
@@ -75,12 +111,13 @@ export default function Workout() {
         <View style={{ flex: 1 }}>
           <BodyBold numberOfLines={1}>{s.name}</BodyBold>
           <Small>
-            Exercise {i + 1} of {total}
+            {position} of {total} done
           </Small>
         </View>
+        {q.length > 1 ? <Button small variant="ghost" icon="grid" title="Change order" onPress={() => setPicking(!picking)} /> : null}
       </View>
-      <View style={{ height: 8, borderRadius: 4, backgroundColor: c.surface2, overflow: 'hidden' }} accessibilityLabel={`Exercise ${i + 1} of ${total}`}>
-        <View style={{ height: 8, width: `${(i / total) * 100}%`, backgroundColor: c.brand, borderRadius: 4 }} />
+      <View style={{ height: 8, borderRadius: 4, backgroundColor: c.surface2, overflow: 'hidden' }} accessibilityLabel={`${position} of ${total} exercises done`}>
+        <View style={{ height: 8, width: `${(position / total) * 100}%`, backgroundColor: c.brand, borderRadius: 4 }} />
       </View>
     </View>
   );
@@ -106,6 +143,54 @@ export default function Workout() {
     );
   }
 
+  if (holding > 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        {topBar}
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 18 }}>
+          <Eyebrow>Hold</Eyebrow>
+          <Text style={{ fontFamily: fonts.displayHeavy, fontSize: Math.round(96 * k), color: c.brand, fontVariant: ['tabular-nums'] }} accessibilityLiveRegion="polite">
+            {holding}s
+          </Text>
+          <Body center>{e.name}</Body>
+          <Button variant="ghost" title="Stop the timer" icon="x" onPress={() => setHolding(0)} />
+        </View>
+      </View>
+    );
+  }
+
+  if (picking) {
+    return (
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        {topBar}
+        <ScrollView contentContainerStyle={{ padding: 18, gap: 12, maxWidth: 680, width: '100%', alignSelf: 'center' }}>
+          <Title>Pick your next exercise</Title>
+          <Body>Gym busy? Do them in whatever order works. Hogan still sees everything you finish.</Body>
+          {q.map((pos, n) => {
+            const x = plan[pos];
+            const ex = exercise(x.exerciseId);
+            return (
+              <Pressable
+                key={pos}
+                accessibilityRole="button"
+                accessibilityLabel={`Do ${ex.name} next`}
+                onPress={() => jumpTo(pos)}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, minHeight: 64, borderRadius: radius.lg, borderWidth: n === 0 ? 2 : 1, borderColor: n === 0 ? c.brand : c.line, backgroundColor: c.surface, opacity: pressed ? 0.85 : 1 })}
+              >
+                <View style={{ flex: 1 }}>
+                  <BodyBold>{ex.name}</BodyBold>
+                  <Small>{prescription(x)}</Small>
+                </View>
+                {n === 0 ? <Tag label="On screen now" tone="neutral" /> : <Icon name="chev" size={22} color={c.muted} />}
+              </Pressable>
+            );
+          })}
+          <Button variant="ghost" title="Back" onPress={() => setPicking(false)} />
+        </ScrollView>
+      </View>
+    );
+  }
+
   const mine = changes[cur.exerciseId] ?? { exerciseId: cur.exerciseId, kinds: [] };
   const updateMine = (patch: Partial<ExerciseChange>) => setChanges({ ...changes, [cur.exerciseId]: { ...mine, ...patch } });
   const toggleKind = (kind: ChangeKind) => updateMine({ kinds: mine.kinds.includes(kind) ? mine.kinds.filter((x) => x !== kind) : [...mine.kinds, kind] });
@@ -115,7 +200,7 @@ export default function Workout() {
 
   const numbers = [
     { label: 'Sets', value: String(cur.sets) },
-    { label: cur.reps ? 'Reps' : 'Time', value: cur.reps ?? cur.time ?? '-' },
+    { label: cur.reps ? 'Reps' : secs !== undefined ? 'Hold' : 'Time', value: cur.reps ?? cur.time ?? '-' },
     { label: 'Weight', value: cur.weight ?? 'Body' },
     { label: 'Rest', value: `${cur.restSec}s` },
   ];
@@ -135,9 +220,11 @@ export default function Workout() {
         ))}
       </View>
       {cur.note ? <Tag label={cur.note} tone="warn" /> : null}
+      {secs !== undefined ? <Button full icon="clock" title={`Start ${secs}s hold timer`} onPress={() => setHolding(secs)} /> : null}
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         <Button small variant={panel === 'struggling' ? 'primary' : 'ghost'} icon="alert" title="Struggling?" onPress={() => setPanel(panel === 'struggling' ? 'none' : 'struggling')} />
         <Button small variant={panel === 'change' ? 'primary' : 'ghost'} icon={noted ? 'check' : 'plus'} title={noted ? 'Change noted' : 'Note a change'} onPress={() => setPanel(panel === 'change' ? 'none' : 'change')} />
+        {q.length > 1 ? <Button small variant="ghost" icon="clock" title="Kit taken? Do it later" onPress={later} /> : null}
       </View>
       {panel === 'struggling' ? (
         <Card tone="warn">
@@ -244,7 +331,7 @@ export default function Workout() {
               style={({ pressed }) => ({ flex: 2, minHeight: 64, borderRadius: radius.lg, backgroundColor: c.brand, flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}
             >
               <Icon name="check" size={26} color={c.brandInk} />
-              <Text style={{ fontFamily: fonts.bold, fontSize: Math.round(19 * k), color: c.brandInk }}>{i + 1 === total ? 'Done, finish session' : 'Done'}</Text>
+              <Text style={{ fontFamily: fonts.bold, fontSize: Math.round(19 * k), color: c.brandInk }}>{q.length === 1 ? 'Done, finish session' : 'Done'}</Text>
             </Pressable>
           </View>
         </View>

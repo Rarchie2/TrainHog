@@ -83,6 +83,8 @@ export const exercises: Exercise[] = [
   ex('e20', 'Squat thrust', '0:12', 'Hands down, step or jump back to a plank, then return and stand.', ['Squat and place hands down.', 'Step or jump back.', 'Return and stand up.'], ['cardio'], 'Step back one leg at a time', 'Add a jump at the top'),
   ex('e21', 'Mountain climber', '0:10', 'Shoulders over hands, drive the knees in one at a time.', ['Start in a plank.', 'Bring one knee in.', 'Swap legs quickly.'], ['cardio', 'core'], 'Hands on a bench', undefined),
   ex('e22', 'Arm circles', '0:10', 'Small circles first, then bigger. Keep your shoulders relaxed.', ['Arms out to the side.', 'Make small circles forwards.', 'Then backwards.'], ['mobility', 'warm-up'], 'One arm at a time', undefined),
+  ex('e24', 'Plank', '0:15', 'Elbows under shoulders, squeeze your bum and keep a straight line from head to heels. Breathe.', ['Forearms on the floor, elbows under shoulders.', 'Step your feet back.', 'Squeeze your bum and tummy.', 'Hold, breathing slowly.'], ['core', 'isometric'], 'Knees down', 'Lift one foot'),
+  ex('e25', 'Wall sit', '0:14', 'Back flat on the wall, knees over ankles. Stop if the knee hurts.', ['Lean your back on a wall.', 'Walk your feet out.', 'Slide down until your knees are bent.', 'Hold.'], ['legs', 'isometric'], 'Higher up the wall', 'Lower, thighs level'),
   ex('e23', 'Seated march', '0:12', 'Sit tall and lift one knee at a time. Swing your arms if you can.', ['Sit near the front of the chair.', 'Lift one knee.', 'Lower and lift the other.'], ['warm-up', 'senior'], undefined, 'Standing march'),
 ];
 
@@ -107,12 +109,14 @@ export const sessions: Session[] = [
     { exerciseId: 'e4', sets: 3, reps: '12', restSec: 45 },
     { exerciseId: 'e5', sets: 3, reps: '15', restSec: 30 },
     { exerciseId: 'e6', sets: 3, reps: '8 each side', restSec: 30 },
+    { exerciseId: 'e25', sets: 2, time: '40 sec', restSec: 45 },
   ], '2 days ago', 'Stop if you feel sharp pain in the knee.'),
   s('s2', 'Upper body B', 'Strength', 35, 'Dumbbells, bench', 2, 'Pushing and pulling strength with good posture.', [
     { exerciseId: 'e8', sets: 3, reps: '10', restSec: 60 },
     { exerciseId: 'e9', sets: 3, reps: '10 each side', weight: '12 kg', restSec: 60, ifStruggling: 'Go down to 10 kg and pause for a second at the top.' },
     { exerciseId: 'e10', sets: 3, reps: '10', weight: '2 x 8 kg', restSec: 60, ifStruggling: 'Sit on a bench with back support and use 2 x 6 kg.' },
     { exerciseId: 'e6', sets: 2, reps: '8 each side', restSec: 30 },
+    { exerciseId: 'e24', sets: 3, time: '30 sec', restSec: 45, ifStruggling: 'Drop your knees to the floor and keep holding.' },
   ], '1 week ago'),
   s('s3', 'Knee-friendly lower body', 'Rehab', 30, 'Step, band', 1, 'Strength for the legs without loading a sore knee.', [
     { exerciseId: 'e7', sets: 3, reps: '8 each leg', restSec: 60 },
@@ -186,7 +190,7 @@ export const assignments: Assignment[] = [
   as('a3', 'c1', 's3', ['Sat'], { isNew: true }),
   as('a4', 'c1', 's4', ['Wed'], { favourite: true }),
   as('a5', 'c1', 's5', []),
-  as('a6', 'c1', 's6', []),
+  as('a6', 'c1', 's6', ['Mon', 'Thu']), // warm-up before the weights on the same days
   as('a7', 'c1', 's7', []),
   as('a8', 'c2', 's8', ['Tue', 'Thu']),
   as('a9', 'c2', 's9', ['Wed']),
@@ -205,19 +209,19 @@ const log = (l: Omit<SessionLog, 'date' | 'dateLabel'> & { daysAgo: number }): S
 };
 
 export const sessionLogs: SessionLog[] = [
-  log({ id: 'l1', clientId: 'c1', sessionId: 's1', daysAgo: 2, minutesAgo: 2 * 1440, completedExerciseIds: ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'], seenByTrainer: true,
+  log({ id: 'l1', clientId: 'c1', sessionId: 's1', daysAgo: 2, minutesAgo: 2 * 1440, completedExerciseIds: ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e25'], seenByTrainer: true,
     changes: [{ exerciseId: 'e2', kinds: ['lowered-weight'], weightUsed: '2 x 8 kg', note: 'Lower back felt tight on the last set.' }, { exerciseId: 'e3', kinds: ['changed-variation', 'issue'], note: 'Did step-ups instead. Left knee twinged on the first lunge.' }],
     checkIn: { feel: 2, effort: 8, enjoyed: 'Goblet squats felt great.', hardExerciseIds: ['e3'], hardNote: 'Walking lunges hurt the left knee a bit.', pain: false } }),
   log({ id: 'l2', clientId: 'c1', sessionId: 's4', daysAgo: 1, minutesAgo: 1440, completedExerciseIds: ['e11', 'e12', 'e13', 'e22'], seenByTrainer: false }),
-  log({ id: 'l3', clientId: 'c1', sessionId: 's2', daysAgo: 5, minutesAgo: 5 * 1440, completedExerciseIds: ['e8', 'e9', 'e10', 'e6'], seenByTrainer: true,
+  log({ id: 'l3', clientId: 'c1', sessionId: 's2', daysAgo: 5, minutesAgo: 5 * 1440, completedExerciseIds: ['e8', 'e9', 'e10', 'e6', 'e24'], seenByTrainer: true,
     checkIn: { feel: 4, effort: 6, enjoyed: 'Went up to 12 kg on the row.', hardExerciseIds: [], pain: false } }),
-  log({ id: 'l4', clientId: 'c1', sessionId: 's1', daysAgo: 9, minutesAgo: 9 * 1440, completedExerciseIds: ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'], seenByTrainer: true,
+  log({ id: 'l4', clientId: 'c1', sessionId: 's1', daysAgo: 9, minutesAgo: 9 * 1440, completedExerciseIds: ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e25'], seenByTrainer: true,
     checkIn: { feel: 3, effort: 7, hardExerciseIds: [], pain: false } }),
   log({ id: 'l5', clientId: 'c2', sessionId: 's8', daysAgo: 1, minutesAgo: 1440, completedExerciseIds: ['e23', 'e22', 'e11', 'e17', 'e15'], seenByTrainer: true,
     checkIn: { feel: 3, effort: 4, hardExerciseIds: ['e15'], pain: false, voiceNote: { length: '0:32', transcript: 'Felt a bit wobbly on the balance one but I managed it. Knees were fine.' } } }),
   log({ id: 'l6', clientId: 'c2', sessionId: 's10', daysAgo: 0, minutesAgo: 14, completedExerciseIds: ['e23', 'e14'], seenByTrainer: false,
     checkIn: { feel: 2, effort: 6, hardExerciseIds: ['e14'], pain: true, forTrainer: 'Stopped after the sit to stands.' } }),
-  log({ id: 'l7', clientId: 'c3', sessionId: 's2', daysAgo: 0, minutesAgo: 38, completedExerciseIds: ['e8', 'e9', 'e10', 'e6'], seenByTrainer: false,
+  log({ id: 'l7', clientId: 'c3', sessionId: 's2', daysAgo: 0, minutesAgo: 38, completedExerciseIds: ['e8', 'e9', 'e10', 'e6', 'e24'], seenByTrainer: false,
     changes: [{ exerciseId: 'e9', kinds: ['raised-weight'], weightUsed: '14 kg' }],
     checkIn: { feel: 4, effort: 7, enjoyed: 'Felt strong, went up to 14 kg on the row.', hardExerciseIds: [], pain: false } }),
   log({ id: 'l8', clientId: 'c4', sessionId: 's5', daysAgo: 0, minutesAgo: 62, completedExerciseIds: ['e19', 'e20', 'e21'], seenByTrainer: false,

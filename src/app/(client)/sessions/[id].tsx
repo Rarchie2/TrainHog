@@ -51,6 +51,7 @@ export default function SessionDetail() {
   const list = (
     <Card>
       <H3>{plan.length} exercises</H3>
+      <Small>Gym busy? You can do them in any order. Tap "Change order" during the session.</Small>
       {assignment?.plan ? <Tag label="Numbers set for you by Hogan" icon="check" tone="ok" /> : null}
       {plan.map((x, i) => {
         const e = exercise(x.exerciseId);

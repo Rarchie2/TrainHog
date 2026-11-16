@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
+import { daysLabel, WEEK_DAYS } from '@/components/Assign';
 import { CheckInItem, PainCard, WeeklyItem } from '@/components/CoachBits';
 import { ProgressCard } from '@/components/Progress';
 import { Icon } from '@/components/Icon';
-import { Avatar, Body, BodyBold, Button, Card, Chip, Columns, H3, Page, Small, Tag, Title, Toggle, useLayout, useUI } from '@/components/ui';
-import { useClientData } from '@/data/selectors';
+import { Avatar, Body, BodyBold, Button, Card, Columns, H3, Page, Small, Tag, Title, Toggle, useLayout, useUI } from '@/components/ui';
+import { onDay, useClientData } from '@/data/selectors';
 import { useStore } from '@/data/store';
 import { fonts, radius, TOUCH } from '@/theme';
 
@@ -18,10 +19,8 @@ export default function ClientDetail() {
   const d = useClientData(id);
   const [msg, setMsg] = useState('');
   const [sent, setSent] = useState(false);
-  const [assigning, setAssigning] = useState(false);
   if (!who) return <Page><Body>Client not found.</Body></Page>;
 
-  const unassigned = st.sessions.filter((s) => !d.mySessions.some((x) => x.session.id === s.id));
   const efforts = d.logs.filter((l) => l.checkIn).slice(0, 8).reverse();
 
   const profile = (
@@ -80,32 +79,44 @@ export default function ClientDetail() {
     </Card>
   );
 
+  const byDay = WEEK_DAYS.map((day) => ({ day, list: d.mySessions.filter((x) => onDay(x.assignment, day)) }));
+
   const sessions = (
     <Card>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <H3>Assigned sessions</H3>
-        <Button small variant="ghost" icon="plus" title="Assign" onPress={() => setAssigning(!assigning)} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <H3>{who.firstName}'s week</H3>
+        <Button small icon="plus" title="Assign a session" onPress={() => router.navigate(`/coach/clients/${who.id}/assign`)} />
       </View>
-      {assigning ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {unassigned.map((s) => (
-            <Chip key={s.id} label={s.name} icon="plus" onPress={() => st.assign(who.id, s.id)} />
-          ))}
-          {unassigned.length === 0 ? <Small>Every session is already assigned.</Small> : null}
-        </View>
-      ) : null}
-      {d.mySessions.map(({ session, assignment }) => (
-        <View key={assignment.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: TOUCH }}>
-          <View style={{ flex: 1 }}>
-            <BodyBold>{session.name}</BodyBold>
-            <Small>
-              {session.category} · {assignment.days.length ? assignment.days.join(', ') : 'Any day'}
-            </Small>
+      <View style={{ gap: 6 }}>
+        {byDay.map(({ day, list }) => (
+          <View key={day} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+            <Small style={{ width: 34, fontFamily: fonts.bold }}>{day}</Small>
+            <Small style={{ flex: 1, color: list.length ? c.ink : c.muted }}>{list.length ? list.map((x) => x.session.name).join(' + ') : 'Rest'}</Small>
           </View>
-          {assignment.isNew ? <Tag label="New" tone="warn" /> : null}
-          <Button small variant="ghost" title={assignment.plan ? 'Edit numbers' : 'Set numbers'} onPress={() => router.navigate(`/coach/clients/${who.id}/plan/${assignment.id}`)} />
+        ))}
+      </View>
+      <H3>Assigned sessions</H3>
+      {d.mySessions.map(({ session, assignment }) => (
+        <View key={assignment.id} style={{ gap: 6, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.line }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <BodyBold>{session.name}</BodyBold>
+              <Small>
+                {session.category} · {daysLabel(assignment.days)}
+              </Small>
+            </View>
+            {assignment.isNew ? <Tag label="New" tone="warn" /> : null}
+            <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${session.name} from ${who.firstName}`} onPress={() => st.unassign(assignment.id)} style={{ minWidth: TOUCH, minHeight: TOUCH, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="x" size={20} color={c.muted} />
+            </Pressable>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <Button small variant="ghost" icon="cal" title="Days" onPress={() => router.navigate(`/coach/clients/${who.id}/assign?session=${session.id}`)} />
+            <Button small variant="ghost" title={assignment.plan ? 'Edit numbers' : 'Set numbers'} onPress={() => router.navigate(`/coach/clients/${who.id}/plan/${assignment.id}`)} />
+          </View>
         </View>
       ))}
+      {d.mySessions.length === 0 ? <Small>Nothing assigned yet.</Small> : null}
     </Card>
   );
 

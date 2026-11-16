@@ -17,7 +17,7 @@ export default function CoachSessions() {
         <View style={{ flex: 1, minWidth: 200 }}>
           <Title>Sessions</Title>
           <Small>
-            {st.sessions.length} sessions · {st.exercises.length} exercises in your library
+            {st.sessions.length} ready-made sessions · {st.exercises.length} exercises in your library. Assign any of them as they are, or copy one and tweak it.
           </Small>
         </View>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
@@ -42,6 +42,10 @@ export default function CoachSessions() {
                   </Small>
                   <Small>Assigned to {assignedCount(s.id)} · edited {s.updated.toLowerCase()}</Small>
                   {s.updated === 'Just now' ? <Tag label="New" tone="warn" /> : null}
+                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                    <Button small icon="plus" title="Assign" onPress={() => router.navigate(`/coach/sessions/assign?session=${s.id}`)} />
+                    <Button small variant="ghost" title="Copy and edit" onPress={() => router.navigate(`/coach/sessions/new?from=${s.id}`)} />
+                  </View>
                 </View>
               </View>
             ))}

@@ -5,6 +5,15 @@ export function prescription(x: Pick<SessionExercise, 'sets' | 'reps' | 'time' |
   return `${x.sets} ${x.sets === 1 ? 'set' : 'sets'} of ${amount}${x.weight ? ` · ${x.weight}` : ''}`;
 }
 
+// Timed exercises (isometric holds, intervals) store their time as "30 sec".
+// Returns the seconds when it's a plain number of seconds, otherwise undefined.
+export function holdSeconds(x: Pick<SessionExercise, 'time'>): number | undefined {
+  const m = x.time?.match(/^(\d+)\s*(s|sec|secs|seconds?)\b/i);
+  if (m) return Number(m[1]);
+  const mins = x.time?.match(/^(\d+)\s*(min|mins|minutes?)\b/i);
+  return mins ? Number(mins[1]) * 60 : undefined;
+}
+
 export function agoLabel(minutes: number) {
   if (minutes < 1) return 'Just now';
   if (minutes < 60) return `${minutes} min ago`;

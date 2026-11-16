@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { CategoryTile, MessageCard, MobileTopBar, WeeklyCard, WeeklyPrompt } from '@/components/ClientBits';
 import { Icon } from '@/components/Icon';
+import { ProgressCard } from '@/components/Progress';
 import {
   Avatar,
   Body,
@@ -37,7 +38,7 @@ export default function Today() {
   return (
     <>
       {me.easyView ? <EasyToday /> : <CleanToday />}
-      <WeeklyPrompt visible={d.weeklyDue && !st.weeklyPromptDismissed} onLater={st.dismissWeeklyPrompt} />
+      <WeeklyPrompt visible={d.weeklyPopup} onLater={() => st.dismissWeeklyPrompt(d.weekStart)} />
     </>
   );
 }
@@ -69,7 +70,7 @@ function CleanToday() {
           <Thumb label={d.planned.session.name} duration="0:22" />
         </View>
         <View style={{ flex: 1, gap: 12, padding: 8, justifyContent: 'center' }}>
-          <Eyebrow color={c.brand}>{d.planned.assignment.days.length ? "Today's session" : 'Up next'}</Eyebrow>
+          <Eyebrow color={c.brand}>{d.today.length > 1 ? `Today's session ${d.today.findIndex((x) => x.session.id === d.planned!.session.id) + 1} of ${d.today.length}` : d.today.length ? "Today's session" : 'Up next'}</Eyebrow>
           <H2>{d.planned.session.name}</H2>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 4 }}>
             <Meta icon="clock" text={`${d.planned.session.minutes} min`} />
@@ -94,6 +95,37 @@ function CleanToday() {
       </View>
     </Card>
   ) : null;
+
+  // More than one session today, e.g. a mobility warm-up and then weights.
+  const alsoToday =
+    d.today.length > 1 ? (
+      <Card key="also">
+        <SectionHead title="Today's plan" />
+        <Small style={{ marginTop: -8 }}>
+          {d.today.filter((x) => x.done).length} of {d.today.length} done. Do them in this order or however suits you.
+        </Small>
+        {d.today.map((x, n) => (
+          <View key={x.assignment.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 }}>
+            <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: x.done ? c.brand : c.brandSoft }}>
+              {x.done ? <Icon name="check" size={16} color={c.brandInk} /> : <Text style={{ fontFamily: fonts.heavy, color: c.brand }}>{n + 1}</Text>}
+            </View>
+            <View style={{ flex: 1 }}>
+              <BodyBold numberOfLines={1}>{x.session.name}</BodyBold>
+              <Small>
+                {x.session.category} · {x.session.minutes} min
+              </Small>
+            </View>
+            {x.done ? (
+              <Tag label="Done" tone="ok" icon="check" />
+            ) : (
+              <Button small variant={x.session.id === d.planned?.session.id ? 'primary' : 'ghost'} icon="play" title="Start" onPress={() => router.navigate(`/workout/${x.session.id}`)} />
+            )}
+          </View>
+        ))}
+      </Card>
+    ) : null;
+
+  const progress = <ProgressCard key="progress" clientId={me.id} audience="client" />;
 
   const message = d.messages[0] ? <MessageCard key="msg" text={d.messages[0].text} at={d.messages[0].at} /> : null;
 
@@ -187,9 +219,11 @@ function CleanToday() {
         <View style={{ gap: 16 }}>
           {message}
           {hero}
+          {alsoToday}
           {weekly}
           {reminder}
           {week}
+          {progress}
           {cats}
           {recent}
         </View>
@@ -197,6 +231,8 @@ function CleanToday() {
         <View style={{ flexDirection: 'row', gap: 18, alignItems: 'flex-start' }}>
           <View style={{ flex: 1.45, gap: 18 }}>
             {hero}
+            {alsoToday}
+            {progress}
             {cats}
           </View>
           <View style={{ flex: 1, gap: 18 }}>
@@ -211,6 +247,8 @@ function CleanToday() {
         <View style={{ flexDirection: 'row', gap: 20, alignItems: 'flex-start' }}>
           <View style={{ flex: 1.5, gap: 20 }}>
             {hero}
+            {alsoToday}
+            {progress}
             {cats}
           </View>
           <View style={{ flex: 1, gap: 20 }}>
@@ -243,12 +281,14 @@ function EasyToday() {
   const { size } = useLayout();
   const d = useClientData(me.id);
   const { c, k } = useUI();
-  const t = d.planned?.session;
+  const todo = d.today.filter((x) => !x.done).map((x) => x.session);
+  const list = todo.length ? todo : d.planned ? [d.planned.session] : [];
 
-  const big = t ? (
+  const big = list.length ? <View style={{ gap: 12 }}>{list.map((t, n) => (
     <Pressable
+      key={t.id}
       accessibilityRole="button"
-      accessibilityLabel={`Start today's session, ${t.name}`}
+      accessibilityLabel={`Start ${n ? 'next' : "today's"} session, ${t.name}`}
       onPress={() => router.navigate(`/workout/${t.id}`)}
       style={({ pressed }) => ({ backgroundColor: c.brand, borderRadius: radius.lg, padding: 22, flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 130, opacity: pressed ? 0.9 : 1 })}
     >
@@ -256,14 +296,14 @@ function EasyToday() {
         <Icon name="play" size={32} color="#fff" />
       </View>
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ fontFamily: fonts.display, color: '#fff', fontSize: Math.round(24 * k) }}>Start today's session</Text>
+        <Text style={{ fontFamily: fonts.display, color: '#fff', fontSize: Math.round(24 * k) }}>{n ? 'Then this session' : "Start today's session"}</Text>
         <Text style={{ fontFamily: fonts.medium, color: '#fff', fontSize: Math.round(16 * k), opacity: 0.92 }}>
           {t.name} · {t.minutes} minutes · You need {t.equipment.toLowerCase()}
         </Text>
       </View>
       <Icon name="chev" size={28} color="#fff" />
     </Pressable>
-  ) : null;
+  ))}</View> : null;
 
   const msg = d.messages[0] ? (
     <Card>

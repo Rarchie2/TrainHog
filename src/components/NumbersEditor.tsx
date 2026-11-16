@@ -1,7 +1,8 @@
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { holdSeconds } from '@/data/format';
 import type { SessionExercise } from '@/data/types';
 import { fonts, radius } from '@/theme';
-import { Small, useUI } from './ui';
+import { Chip, Small, useUI } from './ui';
 
 export function Stepper({ label, value, onChange, step = 1, min = 0, suffix = '' }: { label: string; value: number; onChange: (n: number) => void; step?: number; min?: number; suffix?: string }) {
   const { c } = useUI();
@@ -46,18 +47,28 @@ function Field({ label, value, onChange, placeholder, multiline }: { label: stri
 // Sets, reps, weight, rest and the "if they're struggling" tip for one exercise.
 // Used by the session builder and by the per-client numbers screen.
 export function NumbersEditor({ x, onChange, name }: { x: SessionExercise; onChange: (patch: Partial<SessionExercise>) => void; name: string }) {
-  const numericReps = !x.time && (x.reps === undefined || /^\d+$/.test(x.reps));
+  const timed = x.time !== undefined;
+  const numericReps = !timed && (x.reps === undefined || /^\d+$/.test(x.reps));
+  const secs = timed ? holdSeconds(x) : undefined;
+  // "Each side" applies to both reps and holds, e.g. "30 sec each side".
+  const timeExtra = timed && secs !== undefined ? x.time!.replace(/^\d+\s*\w+\s*/, '') : '';
   return (
     <View style={{ gap: 12 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <Small>Count in</Small>
+        <Chip label="Reps" on={!timed} onPress={() => onChange({ reps: '10', time: undefined })} />
+        <Chip label="Seconds (holds)" on={timed} onPress={() => onChange({ time: '30 sec', reps: undefined })} />
+      </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18 }}>
         <Stepper label="Sets" value={x.sets} min={1} onChange={(n) => onChange({ sets: n })} />
         {numericReps ? <Stepper label="Reps" value={Number(x.reps ?? 10)} min={1} onChange={(n) => onChange({ reps: String(n) })} /> : null}
+        {timed && secs !== undefined ? <Stepper label="Hold" value={secs} min={5} step={5} suffix="s" onChange={(n) => onChange({ time: `${n} sec${timeExtra ? ` ${timeExtra}` : ''}` })} /> : null}
         <Stepper label="Rest" value={x.restSec} step={15} suffix="s" onChange={(n) => onChange({ restSec: n })} />
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
         {!numericReps ? (
-          x.time ? (
-            <Field label="Time" value={x.time} onChange={(t) => onChange({ time: t })} placeholder="For example: 30 sec" />
+          timed ? (
+            <Field label="Time" value={x.time ?? ''} onChange={(t) => onChange({ time: t })} placeholder="For example: 30 sec each side" />
           ) : (
             <Field label="Reps" value={x.reps ?? ''} onChange={(t) => onChange({ reps: t })} placeholder="For example: 8 each side" />
           )

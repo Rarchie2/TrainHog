@@ -19,9 +19,10 @@ export function usePlanWeek(clientId: ID) {
   return { week: Math.min(Math.max(now, 1), who.planWeeks), of: who.planWeeks };
 }
 
-// Hogan's view of a client's plan: bodyweight against their goal, and the
-// top weight on each key lift, week by week.
-export function ProgressCard({ clientId }: { clientId: ID }) {
+// A client's plan: bodyweight against their goal, and the top weight on each
+// key lift, week by week. Hogan sees it on the client page; the client sees
+// their own on Today (audience="client").
+export function ProgressCard({ clientId, audience = 'coach' }: { clientId: ID; audience?: 'coach' | 'client' }) {
   const st = useStore();
   const { exercise } = useLookups();
   const { c } = useUI();
@@ -29,7 +30,9 @@ export function ProgressCard({ clientId }: { clientId: ID }) {
   const who = st.clients.find((x) => x.id === clientId)!;
   const plan = usePlanWeek(clientId);
 
+  const mine = audience === 'client';
   if (!plan || !who.planStart) {
+    if (mine) return null;
     return (
       <Card>
         <H3>Progress</H3>
@@ -57,7 +60,7 @@ export function ProgressCard({ clientId }: { clientId: ID }) {
     <Card>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <View>
-          <H3>Progress</H3>
+          <H3>{mine ? 'Your progress' : 'Progress'}</H3>
           <Small>
             Week {plan.week} of {plan.of} · goal: {GOAL_WORD[goal].toLowerCase()}
           </Small>
@@ -72,22 +75,22 @@ export function ProgressCard({ clientId }: { clientId: ID }) {
         <BodyBold>Bodyweight</BodyBold>
         {bw.length ? (
           <>
-            <ChangeLine first={bw[0].value} last={bw[bw.length - 1].value} unit="kg" good={goodBw} />
+            <ChangeLine first={bw[0].value} last={bw[bw.length - 1].value} unit="kg" good={goodBw} audience={audience} />
             <PlanLine points={bw} weeks={plan.of} unit="kg" />
           </>
         ) : (
-          <Small>No weigh-ins yet. They come in with the weekly check-in.</Small>
+          <Small>{mine ? 'Add your weight in the weekly check-in to see it here.' : 'No weigh-ins yet. They come in with the weekly check-in.'}</Small>
         )}
       </View>
 
       <View style={{ gap: 10, paddingTop: 6 }}>
         <BodyBold>Strength</BodyBold>
-        {lifts.length === 0 ? <Small>No weighted lifts in this plan yet.</Small> : null}
+        {lifts.length === 0 ? <Small>{mine ? 'Your top weights show here once Hogan adds weighted lifts.' : 'No weighted lifts in this plan yet.'}</Small> : null}
         <View style={{ flexDirection: size === 'compact' ? 'column' : 'row', gap: 16, flexWrap: 'wrap' }}>
           {lifts.map((l) => (
             <View key={l.id} style={{ flexGrow: 1, flexBasis: size === 'compact' ? 'auto' : 220, minWidth: 220, gap: 4 }}>
               <Small style={{ fontFamily: undefined }}>{exercise(l.id).name}, top set</Small>
-              <ChangeLine first={l.points[0].value} last={l.points[l.points.length - 1].value} unit="kg" good="up" />
+              <ChangeLine first={l.points[0].value} last={l.points[l.points.length - 1].value} unit="kg" good="up" audience={audience} />
               <PlanLine points={l.points} weeks={plan.of} unit="kg" height={120} />
             </View>
           ))}
