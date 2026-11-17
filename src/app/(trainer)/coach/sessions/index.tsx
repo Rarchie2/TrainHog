@@ -79,6 +79,7 @@ export default function CoachSessions() {
                         if (id) router.navigate(`/coach/sessions/new?edit=${id}`);
                       }}
                     />
+                    <Button small variant="ghost" title="Deload version" onPress={() => router.navigate(`/coach/sessions/deload?id=${s.id}`)} />
                   </View>
                 </View>
               </View>

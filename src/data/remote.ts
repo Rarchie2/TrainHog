@@ -25,6 +25,8 @@ import type {
   SessionLog,
   WeeklyAnswer,
   WeeklyCheckIn,
+  DailyGoal,
+  GoalDay,
 } from './types';
 
 export type Account = { userId: ID; email: string; trainer: boolean; clientId?: ID; businessId?: ID };
@@ -46,6 +48,7 @@ export type LoadedData = {
   posts: CommunityPost[];
   inPerson: InPersonSession[];
   planned: PlannedSession[];
+  goalDays: GoalDay[];
 };
 
 type Row = Record<string, any>;
@@ -89,7 +92,7 @@ async function all(table: string, order?: string): Promise<Row[]> {
 
 // Everything this person may see (the database's rules do the filtering).
 export async function loadAll(account: Account): Promise<LoadedData> {
-  const [clients, priv, members, exercises, sessions, assignments, logs, pain, diary, replies, messages, bodyweights, lifts, weekly, posts, reactions, inPerson, planned, businesses] =
+  const [clients, priv, members, exercises, sessions, assignments, logs, pain, diary, replies, messages, bodyweights, lifts, weekly, posts, reactions, inPerson, planned, businesses, goalDays] =
     await Promise.all([
       all('clients'),
       account.trainer ? all('client_private') : Promise.resolve([]),
@@ -110,6 +113,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       all('in_person'),
       all('planned_sessions'),
       all('businesses'),
+      all('goal_days').catch(() => []), // empty until migration 0006 is applied
     ]);
 
   const lastLog = new Map<string, string>();
@@ -141,6 +145,8 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       planWeeks: c.plan_weeks ?? undefined,
       planStart: c.plan_start ?? undefined,
       community: c.community,
+      dailyGoals: c.daily_goals ?? [],
+      deloadWeeks: c.deload_weeks ?? [],
     };
   };
   const mapped = clients.map(mapClient);
@@ -255,6 +261,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       reactions: reactionMap.get(p.id) ?? {},
     })),
     inPerson: inPerson.map((i) => ({ id: i.id, clientId: i.client_id, date: i.date, time: i.time, place: i.place })),
+    goalDays: goalDays.map((x) => ({ clientId: x.client_id, date: x.day, hits: x.hits ?? {} })),
     planned: planned.map((x) => ({ id: x.id, clientId: x.client_id, sessionId: x.session_id, date: x.date, position: x.position ?? 0 })),
   };
 }
@@ -307,7 +314,9 @@ export const save = {
     );
     await ok(db().from('client_private').insert({ client_id: c.id, business_id: b, trainer_notes: c.trainerNotes }), 'the client');
   },
-  clientFields: (id: ID, fields: { easy_view?: boolean; community?: boolean }) => ok(db().from('clients').update(fields).eq('id', id), 'the setting'),
+  goalDay: (b: ID, g: GoalDay) =>
+    ok(db().from('goal_days').upsert({ business_id: b, client_id: g.clientId, day: g.date, hits: g.hits, updated_at: new Date().toISOString() }, { onConflict: 'client_id,day' }), 'your goals'),
+  clientFields: (id: ID, fields: { easy_view?: boolean; community?: boolean; daily_goals?: DailyGoal[]; deload_weeks?: string[] }) => ok(db().from('clients').update(fields).eq('id', id), 'the setting'),
   weekly: (b: ID, w: WeeklyCheckIn, answers: WeeklyAnswer[]) =>
     ok(db().from('weekly_checkins').insert({ id: w.id, business_id: b, client_id: w.clientId, date: w.date, answers }), 'the weekly check-in'),
   bodyweight: (b: ID, x: BodyweightEntry) => ok(db().from('bodyweights').upsert({ business_id: b, client_id: x.clientId, date: x.date, kg: x.kg }, { onConflict: 'client_id,date' }), 'the weigh-in'),

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { daysLabel } from '@/components/Assign';
 import { Icon } from '@/components/Icon';
-import { Body, BodyBold, Button, Card, Chip, H3, Page, Small, Tag, Title, useLayout, useUI } from '@/components/ui';
+import { Body, BodyBold, Button, Card, Chip, H3, Page, Small, Tag, Title, Toggle, useLayout, useUI } from '@/components/ui';
 import { isoDate, longDate, monthName } from '@/data/sample';
 import { dayItems, isMissed, startOfWeek } from '@/data/selectors';
 import { useStore } from '@/data/store';
@@ -79,6 +79,7 @@ export default function ClientCalendar() {
           const allDone = its.length > 0 && its.every((x) => x.done);
           const inMonth = d.getMonth() === month.getMonth();
           const on = iso === selected;
+          const deload = (who.deloadWeeks ?? []).includes(isoDate(startOfWeek(d)));
           return (
             <Pressable
               key={iso}
@@ -95,7 +96,7 @@ export default function ClientCalendar() {
                   gap: 3,
                   borderWidth: on ? 2 : 1,
                   borderColor: on ? c.brand : missed ? c.bad : c.line,
-                  backgroundColor: iso === todayIso ? c.brandSoft : c.surface,
+                  backgroundColor: iso === todayIso ? c.brandSoft : deload ? c.warnSoft : c.surface,
                   opacity: inMonth ? 1 : 0.45,
                 }}
               >
@@ -118,6 +119,7 @@ export default function ClientCalendar() {
                     </Text>
                   ))
                 )}
+                {deload && d.getDay() === 1 && size !== 'compact' ? <Text style={{ fontSize: 11, color: c.warn, fontFamily: fonts.bold }}>Deload</Text> : null}
                 {size !== 'compact' && its.length > 2 ? <Text style={{ fontSize: 11, color: c.muted, fontFamily: fonts.medium }}>+{its.length - 2} more</Text> : null}
               </View>
             </Pressable>
@@ -132,6 +134,10 @@ export default function ClientCalendar() {
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
           <Icon name="check" size={13} color={c.ok} />
           <Small>Done</Small>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+          <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: c.warnSoft, borderWidth: 1, borderColor: c.line }} />
+          <Small>Deload week</Small>
         </View>
       </View>
     </Card>
@@ -156,6 +162,13 @@ export default function ClientCalendar() {
             ) : null}
           </View>
         ))}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.line }}>
+          <Toggle label="Deload week" value={(who.deloadWeeks ?? []).includes(weekStart)} onChange={(v) => st.setDeload(who.id, weekStart, v)} />
+          <View style={{ flex: 1 }}>
+            <BodyBold>Deload week</BodyBold>
+            <Small>Shows {who.firstName} it's a lighter week. Use "Deload version" on a session to make lighter copies to put on these days.</Small>
+          </View>
+        </View>
         {weekDated ? (
           <View style={{ gap: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.line }}>
             <Small>
