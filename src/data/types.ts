@@ -43,7 +43,21 @@ export type Client = {
   planWeeks?: number; // length of the current plan, e.g. 8
   planStart?: string; // ISO date the plan started
   community?: boolean; // opted in to the community feed
+  dailyGoals?: DailyGoal[]; // set by the trainer, ticked by the client each day
+  deloadWeeks?: string[]; // Mondays (ISO dates) of weeks the trainer marked as deload
 };
+
+// A daily goal the trainer sets for one client. Clients just tick Hit or not.
+export type DailyGoalKind = 'steps' | 'water' | 'meals' | 'protein' | 'sleep' | 'custom';
+export type DailyGoal = {
+  id: ID;
+  kind: DailyGoalKind;
+  target?: number; // 8000 steps, 2 litres, 3 meals, 120 g, 8 hours
+  label?: string; // for custom goals, e.g. "10 minutes of stretching"
+};
+
+// One client's ticks for one day: goal id -> hit (meals: one tick per meal).
+export type GoalDay = { clientId: ID; date: string; hits: Record<ID, boolean | boolean[]> };
 
 // Hogan's library categories: stretches, drills, cardio and each muscle group.
 export type ExerciseCategory =

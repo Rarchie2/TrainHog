@@ -10,6 +10,7 @@ import { AppState } from 'react-native';
 import { authRedirectUrl, signInFromLink, supabase, uuid } from './backend';
 import { type Account, claimAccount, type LoadedData, loadAll, save } from './remote';
 import * as seed from './sample';
+import { lighterWeight } from './structure';
 import type {
   Assignment,
   Business,
@@ -17,8 +18,10 @@ import type {
   Client,
   CommunityPost,
   Exercise,
+  DailyGoal,
   DiaryEntry,
   ExerciseChange,
+  GoalDay,
   ID,
   Message,
   PlannedSession,
@@ -80,9 +83,10 @@ function demoData(): LoadedData {
     posts: seed.communityPosts,
     inPerson: seed.inPerson,
     planned: seed.planned,
+    goalDays: seed.goalDays,
   };
 }
-const EMPTY: LoadedData = { business: null, clients: [], exercises: [], sessions: [], assignments: [], logs: [], pain: [], diary: [], replies: [], messages: [], bodyweights: [], lifts: [], weekly: [], posts: [], inPerson: [], planned: [] };
+const EMPTY: LoadedData = { business: null, clients: [], exercises: [], sessions: [], assignments: [], logs: [], pain: [], diary: [], replies: [], messages: [], bodyweights: [], lifts: [], weekly: [], posts: [], inPerson: [], planned: [], goalDays: [] };
 
 function initialState(): State {
   return {
@@ -131,6 +135,10 @@ type Actions = {
   copyWeek: (clientId: ID, fromMonday: string, weeks: number) => number; // how many sessions were added
   setBranding: (theme: Business['theme'] | undefined, logo: string | undefined) => void;
   unassign: (assignmentId: ID) => void;
+  setDailyGoals: (clientId: ID, goals: DailyGoal[]) => void;
+  tickGoal: (clientId: ID, date: string, goalId: ID, value: boolean | boolean[]) => void;
+  setDeload: (clientId: ID, monday: string, on: boolean) => void;
+  makeDeload: (sessionId: ID, percent: number, opts: { sets: boolean; weight: boolean }) => ID | undefined;
   addClient: (firstName: string, lastName: string, contact: string, easyView: boolean) => void;
   reset: () => void;
   // Sign-in
@@ -505,6 +513,62 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     [remote],
   );
+  // Daily goals: the trainer sets them per client; the client ticks them off.
+  const setClientFields = useCallback((clientId: ID, patch: Partial<Client>) => set((s) => ({ ...s, clients: s.clients.map((c) => (c.id === clientId ? { ...c, ...patch } : c)) })), []);
+  const setDailyGoals = useCallback(
+    (clientId: ID, goals: DailyGoal[]) => {
+      setClientFields(clientId, { dailyGoals: goals });
+      remote(() => save.clientFields(clientId, { daily_goals: goals }));
+    },
+    [remote, setClientFields],
+  );
+  const tickGoal = useCallback(
+    (clientId: ID, date: string, goalId: ID, value: boolean | boolean[]) => {
+      const old = ref.current.goalDays.find((x) => x.clientId === clientId && x.date === date);
+      const day: GoalDay = { clientId, date, hits: { ...(old?.hits ?? {}), [goalId]: value } };
+      set((s) => ({ ...s, goalDays: [...s.goalDays.filter((x) => !(x.clientId === clientId && x.date === date)), day] }));
+      remote(() => save.goalDay(biz(), day));
+    },
+    [remote],
+  );
+  // Deload weeks: the trainer marks a week; clients see it on their week.
+  const setDeload = useCallback(
+    (clientId: ID, monday: string, on: boolean) => {
+      const was = ref.current.clients.find((c) => c.id === clientId)?.deloadWeeks ?? [];
+      const weeks = on ? Array.from(new Set([...was, monday])).sort() : was.filter((w) => w !== monday);
+      setClientFields(clientId, { deloadWeeks: weeks });
+      remote(() => save.clientFields(clientId, { deload_weeks: weeks }));
+    },
+    [remote, setClientFields],
+  );
+  // A lighter copy of a session for a deload week, which the trainer then edits.
+  const makeDeload = useCallback(
+    (sessionId: ID, percent: number, opts: { sets: boolean; weight: boolean }) => {
+      const old = ref.current.sessions.find((x) => x.id === sessionId);
+      if (!old) return undefined;
+      const keep = 1 - percent / 100;
+      const base = old.name.replace(/\s*\((?:deload|\d+)\)$/i, '');
+      const taken = ref.current.sessions.map((x) => x.name);
+      let name = `${base} (deload)`;
+      for (let n = 2; taken.includes(name); n++) name = `${base} (deload ${n})`;
+      const copy: Session = {
+        ...old,
+        id: newId(),
+        name,
+        updated: 'Just now',
+        exercises: old.exercises.map((x) => ({
+          ...x,
+          sets: opts.sets ? Math.max(1, Math.round(x.sets * keep)) : x.sets,
+          weight: opts.weight && x.weight ? lighterWeight(x.weight, keep) : x.weight,
+          dropSet: opts.sets ? false : x.dropSet,
+        })),
+      };
+      set((s) => ({ ...s, sessions: [...s.sessions, copy] }));
+      remote(() => save.session(biz(), copy));
+      return copy.id;
+    },
+    [remote],
+  );
   const setDays = useCallback((assignmentId: ID, days: string[]) => updateAssignment(assignmentId, { days }), [updateAssignment]);
   const setPlan = useCallback((assignmentId: ID, plan: SessionExercise[]) => updateAssignment(assignmentId, { plan, isNew: true }), [updateAssignment]);
   const unassign = useCallback(
@@ -603,7 +667,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions: Actions = {
     setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage,
-    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, setBranding, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
+    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, setBranding, unassign, setDailyGoals, tickGoal, setDeload, makeDeload, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
     setCommunity, post, react, setPlan, reset, startDemo, sendCode, verifyCode, signOut, refresh, refreshAccount, clearSyncError,
   };
   // Every action above is stable (useCallback), so this only changes with the data.

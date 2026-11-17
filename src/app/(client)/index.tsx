@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { CategoryTile, MessageCard, MobileTopBar, WeeklyCard, WeeklyPrompt } from '@/components/ClientBits';
+import { TodayGoals } from '@/components/Goals';
 import { Icon } from '@/components/Icon';
 import { ProgressCard } from '@/components/Progress';
 import {
@@ -25,8 +26,8 @@ import {
   useLayout,
   useUI,
 } from '@/components/ui';
-import { longDate } from '@/data/sample';
-import { greeting, useClientData } from '@/data/selectors';
+import { isoDate, longDate } from '@/data/sample';
+import { greeting, startOfWeek, useClientData } from '@/data/selectors';
 import { useLookups, useMe, useStore } from '@/data/store';
 import { WEEKLY_COUNT } from '@/data/weekly';
 import { fonts, radius } from '@/theme';
@@ -144,10 +145,12 @@ function CleanToday() {
     ) : null;
 
   const weekly = d.weeklyDue ? <WeeklyCard key="weekly" /> : null;
+  const goals = <TodayGoals key="goals" clientId={me.id} />;
 
   const week = (
     <Card key="week">
       <SectionHead title="This week" />
+      {(me.deloadWeeks ?? []).includes(isoDate(startOfWeek())) ? <Tag label="Deload week: a lighter week to let your body recover" tone="warn" /> : null}
       <Small style={{ marginTop: -8 }}>
         {d.doneThisWeek} of {Math.max(d.plannedThisWeek, d.doneThisWeek)} done
       </Small>
@@ -242,6 +245,7 @@ function CleanToday() {
           {message}
           {hero}
           {alsoToday}
+          {goals}
           {weekly}
           {reminder}
           {week}
@@ -259,6 +263,7 @@ function CleanToday() {
           </View>
           <View style={{ flex: 1, gap: 18 }}>
             {message}
+            {goals}
             {weekly}
             {reminder}
             {week}
@@ -275,6 +280,7 @@ function CleanToday() {
           </View>
           <View style={{ flex: 1, gap: 20 }}>
             {message}
+            {goals}
             {weekly}
             {reminder}
           </View>
@@ -362,6 +368,7 @@ function EasyToday() {
         <View style={{ flex: size === 'compact' ? undefined : 1.2 }}>{big}</View>
         <View style={{ flex: size === 'compact' ? undefined : 1 }}>{msg}</View>
       </View>
+      <TodayGoals clientId={me.id} />
       <View style={{ flexDirection: size === 'compact' ? 'column' : 'row', gap: 14 }}>
         {btns.map((b) => (
           <Pressable

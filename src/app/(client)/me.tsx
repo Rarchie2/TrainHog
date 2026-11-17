@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { MobileTopBar } from '@/components/ClientBits';
 import { Icon } from '@/components/Icon';
-import { Avatar, Body, BodyBold, Button, Card, Columns, H3, Page, Small, Title, Toggle, useLayout, useUI } from '@/components/ui';
+import { Avatar, Body, BodyBold, Button, Card, Chip, Columns, H3, Page, Small, Title, Toggle, useLayout, useUI } from '@/components/ui';
 import { supabase } from '@/data/backend';
+import { REMINDER_TIMES, timeLabel, useReminderSetting } from '@/data/reminder';
 import { useMe, useStore } from '@/data/store';
 
 const isLiveCapable = !!supabase;
@@ -37,6 +38,7 @@ export default function Me() {
   const [aloud, setAloud] = useState(me.easyView);
   const [reminders, setReminders] = useState(true);
   const [faceId, setFaceId] = useState(false);
+  const [goalReminder, setGoalReminder] = useReminderSetting();
 
   return (
     <Page maxWidth={1100}>
@@ -78,6 +80,20 @@ export default function Me() {
         </Card>
         <Card>
           <H3>Reminders and security</H3>
+          {me.dailyGoals?.length ? (
+            <>
+              <Row title="Morning goals reminder" sub={goalReminder.on ? `Every day at ${timeLabel(goalReminder.time)}` : 'Off'}>
+                <Toggle label="Morning goals reminder" value={goalReminder.on} onChange={(v) => setGoalReminder({ ...goalReminder, on: v })} />
+              </Row>
+              {goalReminder.on ? (
+                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  {REMINDER_TIMES.map((t) => (
+                    <Chip key={t} label={timeLabel(t)} on={goalReminder.time === t} onPress={() => setGoalReminder({ ...goalReminder, time: t })} />
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : null}
           <Row title="Session reminders" sub="Weekdays at 7:30am">
             <Toggle label="Session reminders" value={reminders} onChange={setReminders} />
           </Row>

@@ -137,3 +137,14 @@ export function cleanVideoUrl(t: string): string | undefined {
   if (!v) return undefined;
   return /^https?:\/\//i.test(v) ? v : `https://${v}`;
 }
+
+// A lighter weight for a deload: "16 kg" at 60% -> "9.5 kg". Only the load
+// changes, so "2 x 10 kg" keeps 2 dumbbells. Rounds to 0.5 (whole above 20).
+export function lighterWeight(weight: string, keep: number) {
+  const scale = (m: string) => {
+    const v = Number(m) * keep;
+    return String(v >= 20 ? Math.round(v) : Math.round(v * 2) / 2);
+  };
+  if (/\d(?:\.\d+)?\s*(?:kg|lbs?)\b/i.test(weight)) return weight.replace(/\d+(?:\.\d+)?(?=\s*(?:kg|lbs?)\b)/gi, scale);
+  return weight.replace(/\d+(?:\.\d+)?(?!.*\d)/, scale);
+}

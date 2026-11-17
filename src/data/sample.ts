@@ -9,6 +9,7 @@ import type {
   CommunityPost,
   DiaryEntry,
   InPersonSession,
+  GoalDay,
   PlannedSession,
   LiftEntry,
   WeeklyCheckIn,
@@ -221,8 +222,8 @@ for (const [id, phase] of [['s4', 1], ['s8', 2]] as const) {
 const cl = (c: Omit<Client, 'businessId'>): Client => ({ ...c, businessId: 'b1' });
 
 export const clients: Client[] = [
-  cl({ id: 'c1', firstName: 'Sarah', lastName: 'Collins', initials: 'SC', contact: '07700 900123', ageGroup: 'adult', goals: 'Run a half marathon in the spring without knee pain.', conditions: 'Occasional left knee pain on lunges.', trainerNotes: 'Responds well to clear numbers. Watch the left knee.', programme: 'Strength block · week 7 of 8', easyView: false, invite: 'joined', lastActive: 'Today', daysSinceActive: 0, goalType: 'lose', planWeeks: 8, planStart: isoDate(daysAgo(43)), community: true }),
-  cl({ id: 'c2', firstName: 'Margaret', lastName: 'Ellis', initials: 'ME', contact: '07700 900456', ageGroup: 'senior', goals: 'Feel steadier on her feet and keep gardening.', conditions: 'Right knee osteoarthritis. Mild balance worries.', trainerNotes: 'Prefers voice notes. Daughter helped set up the app.', programme: 'Gentle start · week 3 of 8', easyView: true, invite: 'joined', lastActive: '12 minutes ago', daysSinceActive: 0, goalType: 'maintain', planWeeks: 8, planStart: isoDate(daysAgo(15)), community: false }),
+  cl({ id: 'c1', firstName: 'Sarah', lastName: 'Collins', initials: 'SC', contact: '07700 900123', ageGroup: 'adult', goals: 'Run a half marathon in the spring without knee pain.', conditions: 'Occasional left knee pain on lunges.', trainerNotes: 'Responds well to clear numbers. Watch the left knee.', programme: 'Strength block · week 7 of 8', easyView: false, invite: 'joined', lastActive: 'Today', daysSinceActive: 0, goalType: 'lose', planWeeks: 8, planStart: isoDate(daysAgo(43)), community: true, dailyGoals: [{ id: 'g1', kind: 'steps', target: 8000 }, { id: 'g2', kind: 'water', target: 2 }, { id: 'g3', kind: 'meals', target: 3 }], deloadWeeks: [] }),
+  cl({ id: 'c2', firstName: 'Margaret', lastName: 'Ellis', initials: 'ME', contact: '07700 900456', ageGroup: 'senior', goals: 'Feel steadier on her feet and keep gardening.', conditions: 'Right knee osteoarthritis. Mild balance worries.', trainerNotes: 'Prefers voice notes. Daughter helped set up the app.', programme: 'Gentle start · week 3 of 8', easyView: true, invite: 'joined', lastActive: '12 minutes ago', daysSinceActive: 0, goalType: 'maintain', planWeeks: 8, planStart: isoDate(daysAgo(15)), community: false, dailyGoals: [{ id: 'g1', kind: 'steps', target: 4000 }, { id: 'g2', kind: 'water', target: 1.5 }] }),
   cl({ id: 'c3', firstName: 'Tom', lastName: 'Reid', initials: 'TR', contact: 'tom@example.com', ageGroup: 'adult', goals: 'Build upper body strength.', conditions: 'None.', trainerNotes: '', programme: 'Muscle gain · week 8 of 8', easyView: false, invite: 'joined', lastActive: '38 minutes ago', daysSinceActive: 0, goalType: 'gain', planWeeks: 8, planStart: isoDate(daysAgo(52)), community: true }),
   cl({ id: 'c4', firstName: 'Priya', lastName: 'Shah', initials: 'PS', contact: 'priya@example.com', ageGroup: 'adult', goals: 'Stay fit while travelling for work.', conditions: 'None.', trainerNotes: 'Away most weeks. Hotel sessions.', programme: 'Travel plan · week 4 of 8', easyView: false, invite: 'joined', lastActive: '1 hour ago', daysSinceActive: 0, goalType: 'maintain', planWeeks: 8, planStart: isoDate(daysAgo(24)), community: true }),
   cl({ id: 'c5', firstName: 'Dave', lastName: 'Morgan', initials: 'DM', contact: '07700 900789', ageGroup: 'adult', goals: 'Ease lower back stiffness.', conditions: 'Desk job, stiff back.', trainerNotes: '', programme: 'Mobility first · week 2 of 8', easyView: false, invite: 'joined', lastActive: '3 hours ago', daysSinceActive: 0, goalType: 'lose', planWeeks: 8, planStart: isoDate(daysAgo(10)), community: true }),
@@ -373,4 +374,16 @@ export const planned: PlannedSession[] = [
   pl('p4', 'c1', 's5', -4),
   pl('p5', 'c3', 's1', 4),
   pl('p6', 'c3', 's5', -1),
+];
+
+// Sarah's daily goal ticks for the last week (today left for the demo).
+const gd = (n: number, steps: boolean, water: boolean, meals: boolean[]): GoalDay => ({ clientId: 'c1', date: isoDate(daysAgo(n)), hits: { g1: steps, g2: water, g3: meals } });
+export const goalDays: GoalDay[] = [
+  gd(6, true, true, [true, true, true]),
+  gd(5, false, true, [true, true, false]),
+  gd(4, true, false, [true, true, true]),
+  gd(3, true, true, [true, true, true]),
+  gd(2, false, true, [true, false, true]),
+  gd(1, true, true, [true, true, true]),
+  { clientId: 'c2', date: isoDate(daysAgo(1)), hits: { g1: true, g2: false } },
 ];

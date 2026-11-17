@@ -3,14 +3,17 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Shell } from '@/components/Shell';
 import { Button, Card, Small, BodyBold } from '@/components/ui';
+import { useGoalReminder } from '@/data/reminder';
 import { useStore } from '@/data/store';
 
 export default function ClientLayout() {
-  const { setRole, mode, role, account } = useStore();
+  const { setRole, mode, role, account, clients, clientId } = useStore();
   const coachHome = mode === 'live' && account?.trainer && role === 'trainer';
   useEffect(() => {
     if (!coachHome) setRole('client');
   }, [setRole, coachHome]);
+  // Only on a client's own phone, not when a trainer previews the app.
+  useGoalReminder(clients.find((x) => x.id === clientId)?.dailyGoals, mode === 'live' && !account?.trainer);
   // A trainer signing in lands on their dashboard, not the client app.
   if (coachHome) return <Redirect href="/coach" />;
   return (

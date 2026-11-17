@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { daysLabel, WEEK_DAYS } from '@/components/Assign';
 import { CheckInItem, PainCard, WeeklyItem } from '@/components/CoachBits';
+import { GoalsWeek } from '@/components/Goals';
 import { ProgressCard } from '@/components/Progress';
 import { Icon } from '@/components/Icon';
 import { Avatar, Body, BodyBold, Button, Card, Columns, H3, Page, Small, Tag, Title, Toggle, useLayout, useUI } from '@/components/ui';
@@ -197,6 +198,7 @@ export default function ClientDetail() {
         {profile}
         {message}
         {sessions}
+        <GoalsWeek clientId={who.id} />
         {trend}
       </Columns>
       <ProgressCard clientId={who.id} />

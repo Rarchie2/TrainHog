@@ -230,6 +230,17 @@ export function Mark({ size = 36, logo }: { size?: number; logo?: string | null 
   const { c } = useUI();
   const key = logo === undefined ? business?.logo : logo ?? undefined;
   const own = key ? LOGOS[key] : undefined;
+  // An uploaded logo (a link): shown whole on a white tile.
+  if (key && !own && /^(https?:|data:image|file:|blob:)/.test(key)) {
+    return (
+      <View
+        accessibilityLabel="Logo"
+        style={{ width: size, height: size, borderRadius: size * 0.23, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: c.line, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
+      >
+        <Image source={{ uri: key }} style={{ width: size * 0.84, height: size * 0.84 }} resizeMode="contain" />
+      </View>
+    );
+  }
   if (own) {
     return (
       <View
