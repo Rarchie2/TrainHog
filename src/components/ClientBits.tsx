@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { APP_NAME } from '@/config';
-import { useLookups } from '@/data/store';
+import { useLookups, useStore } from '@/data/store';
 import { WEEKLY_COUNT } from '@/data/weekly';
 import type { Assignment, Session, SessionLog } from '@/data/types';
 import { fonts, radius, TOUCH } from '@/theme';
@@ -31,11 +31,15 @@ import {
 export function MobileTopBar({ initials }: { initials: string }) {
   const { size } = useLayout();
   const { c } = useUI();
+  const { business } = useStore();
   if (size !== 'compact') return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <Mark size={32} />
-      <Text style={{ fontFamily: fonts.display, fontSize: 17, color: c.ink, flex: 1 }}>{APP_NAME}</Text>
+      <Mark size={business?.logo ? 40 : 32} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: fonts.display, fontSize: 17, color: c.ink }}>{APP_NAME}</Text>
+        {business?.logo && business.name !== APP_NAME ? <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: c.muted }}>with {business.name}</Text> : null}
+      </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Me and settings" onPress={() => router.navigate('/me')}>
         <Avatar initials={initials} size={38} />
       </Pressable>
