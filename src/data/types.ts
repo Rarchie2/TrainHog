@@ -105,6 +105,8 @@ export type Session = {
   name: string;
   category: Category;
   kind?: SessionKind;
+  programme?: string; // a phased template, e.g. "Shoulder mobility"
+  phase?: number; // 1, 2, 3 ...
   minutes: number;
   equipment: string;
   level: 1 | 2 | 3;

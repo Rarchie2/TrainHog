@@ -23,6 +23,9 @@ export default function NewSession() {
   const source = editing ?? st.sessions.find((x) => x.id === from);
   const [name, setName] = useState(editing ? editing.name : source ? `${source.name} (copy)` : '');
   const [category, setCategory] = useState<Category>(source?.category ?? 'Strength');
+  const [programme, setProgramme] = useState(source?.programme ?? '');
+  const [phase, setPhase] = useState<number | undefined>(source?.phase);
+  const programmes = Array.from(new Set(st.sessions.map((x) => x.programme).filter((x): x is string => !!x))).sort();
   const [kind, setKind] = useState<SessionKind>(source?.kind ?? (source?.category === 'Cardio' ? 'cv' : 'weights'));
   const [items, setItems] = useState<SessionExercise[]>(() => sortBySection(source?.exercises.map((x) => ({ ...x })) ?? []));
   const [target, setTarget] = useState<SectionId>('main');
@@ -184,6 +187,23 @@ export default function NewSession() {
             <Chip key={cat} label={cat} on={category === cat} onPress={() => setCategory(cat)} />
           ))}
         </View>
+        <Small>Part of a phased programme? (optional)</Small>
+        <TextInput value={programme} onChangeText={setProgramme} placeholder="Programme name, e.g. Shoulder mobility" placeholderTextColor={c.muted} style={input} accessibilityLabel="Programme name" />
+        {programmes.length ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {programmes.map((p) => (
+              <Chip key={p} label={p} on={programme.trim() === p} onPress={() => setProgramme(programme.trim() === p ? '' : p)} />
+            ))}
+          </View>
+        ) : null}
+        {programme.trim() ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <Small>Phase</Small>
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <Chip key={n} label={String(n)} on={phase === n} onPress={() => setPhase(phase === n ? undefined : n)} />
+            ))}
+          </View>
+        ) : null}
         {editing ? <Small>Clients you've given their own numbers for this session keep those numbers. Everyone else sees the changes.</Small> : null}
       </Card>
       <Card>
@@ -257,6 +277,8 @@ export default function NewSession() {
             level: source?.level ?? 1,
             purpose: source?.purpose ?? `${KIND_LABEL[kind]} from Hogan.`,
             safetyNote: source?.safetyNote,
+            programme: programme.trim() || undefined,
+            phase: programme.trim() ? phase : undefined,
             exercises: items,
           };
           if (editing) st.updateSession(editing.id, body);

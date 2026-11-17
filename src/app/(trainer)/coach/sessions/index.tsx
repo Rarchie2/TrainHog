@@ -10,6 +10,7 @@ export default function CoachSessions() {
   const { size } = useLayout();
   const { c } = useUI();
   const groups = Array.from(st.sessions.reduce((m, s) => m.set(s.category, [...(m.get(s.category) ?? []), s]), new Map<Category, Session[]>()));
+  const programmes = Array.from(st.sessions.reduce((m, s) => (s.programme ? m.set(s.programme, [...(m.get(s.programme) ?? []), s]) : m), new Map<string, Session[]>())).sort((a, b) => a[0].localeCompare(b[0]));
   const assignedCount = (id: string) => st.assignments.filter((a) => a.sessionId === id).length;
 
   return (
@@ -26,6 +27,26 @@ export default function CoachSessions() {
           <Button small icon="plus" title="Build a session" onPress={() => router.navigate('/coach/sessions/new')} />
         </View>
       </View>
+      {programmes.length ? (
+        <Card>
+          <H3>Phased programmes</H3>
+          <Small>Assign a phase to the clients you pick. Nobody else sees it.</Small>
+          {programmes.map(([name, list]) => {
+            const phases = Array.from(new Set(list.map((x) => x.phase ?? 0))).sort((a, b) => a - b);
+            return (
+              <View key={name} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 10, borderTopWidth: 1, borderTopColor: c.line }}>
+                <View style={{ flex: 1, minWidth: 180 }}>
+                  <BodyBold>{name}</BodyBold>
+                  <Small>
+                    {phases.filter(Boolean).length ? `Phases ${phases.filter(Boolean).join(', ')}` : 'No phases set'} · {list.length} sessions
+                  </Small>
+                </View>
+                <Button small icon="plus" title="Assign a phase" onPress={() => router.navigate({ pathname: '/coach/sessions/programme', params: { name } } as never)} />
+              </View>
+            );
+          })}
+        </Card>
+      ) : null}
       <Columns cols={size === 'wide' ? 3 : size === 'medium' ? 2 : 1} gap={18}>
         {groups.map(([cat, list]) => (
           <Card key={cat}>
@@ -42,6 +63,7 @@ export default function CoachSessions() {
                     {s.kind ? `${KIND_LABEL[s.kind]} · ` : ''}
                     {s.minutes} min · {s.exercises.length} exercises
                   </Small>
+                  {s.programme ? <Small>{s.programme}{s.phase ? ` · phase ${s.phase}` : ''}</Small> : null}
                   <Small>Assigned to {assignedCount(s.id)} · edited {s.updated.toLowerCase()}</Small>
                   {s.updated === 'Just now' ? <Tag label="New" tone="warn" /> : null}
                   <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>

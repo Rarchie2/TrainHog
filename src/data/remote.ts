@@ -176,6 +176,8 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       name: s.name,
       category: s.category,
       kind: s.kind ?? undefined,
+      programme: s.programme ?? undefined,
+      phase: s.phase ?? undefined,
       minutes: s.minutes,
       equipment: s.equipment,
       level: s.level,
@@ -281,7 +283,7 @@ export const save = {
   unassign: (id: ID) => ok(db().from('assignments').delete().eq('id', id), 'the change'),
   session: (b: ID, s: Session) =>
     ok(
-      db().from('sessions').upsert({ id: s.id, business_id: b, name: s.name, category: s.category, kind: s.kind ?? null, minutes: s.minutes, equipment: s.equipment, level: s.level, purpose: s.purpose, safety_note: s.safetyNote ?? null, exercises: exList(s.exercises), updated_at: new Date().toISOString() }),
+      db().from('sessions').upsert({ id: s.id, business_id: b, name: s.name, category: s.category, kind: s.kind ?? null, programme: s.programme ?? null, phase: s.phase ?? null, minutes: s.minutes, equipment: s.equipment, level: s.level, purpose: s.purpose, safety_note: s.safetyNote ?? null, exercises: exList(s.exercises), updated_at: new Date().toISOString() }),
       'the session',
     ),
   exercise: (b: ID, e: Exercise) =>

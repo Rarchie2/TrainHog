@@ -209,6 +209,13 @@ export const sessions: Session[] = [
   ], 'Last week'),
 ];
 
+// A phased template for the demo: mobility phase 1 then phase 2.
+for (const [id, phase] of [['s4', 1], ['s8', 2]] as const) {
+  const x = sessions.find((y) => y.id === id)!;
+  x.programme = 'Mobility progression';
+  x.phase = phase;
+}
+
 const cl = (c: Omit<Client, 'businessId'>): Client => ({ ...c, businessId: 'b1' });
 
 export const clients: Client[] = [
