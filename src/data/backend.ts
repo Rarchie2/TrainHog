@@ -2,6 +2,7 @@
 // set up (see src/config.ts), and then the app runs on demo data only.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
 import { AppState, Platform } from 'react-native';
 import { SUPABASE_KEY, SUPABASE_URL } from '@/config';
 
@@ -36,4 +37,30 @@ export function uuid() {
     else s += h[(Math.random() * 16) | 0];
   }
   return s;
+}
+
+// Where the sign-in email's link sends people: back into the app
+// (trainhog://auth), or back to the web app on a computer.
+export function authRedirectUrl() {
+  return Linking.createURL('auth');
+}
+
+// Finish signing in from the email link. Returns an error message or null.
+export async function signInFromLink(url: string): Promise<string | null> {
+  if (!supabase) return 'Sign-in is not set up yet.';
+  const parts = new URLSearchParams([url.split('?')[1]?.split('#')[0] ?? '', url.split('#')[1] ?? ''].join('&'));
+  const desc = parts.get('error_description');
+  if (desc) return /expired|invalid/i.test(desc) ? 'That sign-in link has expired. Ask for a new one.' : desc.replace(/\+/g, ' ');
+  const access = parts.get('access_token');
+  const refresh = parts.get('refresh_token');
+  if (access && refresh) {
+    const { error } = await supabase.auth.setSession({ access_token: access, refresh_token: refresh });
+    return error ? error.message : null;
+  }
+  const code = parts.get('code');
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    return error ? error.message : null;
+  }
+  return null;
 }

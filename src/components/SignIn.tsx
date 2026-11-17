@@ -23,6 +23,7 @@ export function SignIn() {
   const send = async () => {
     setBusy(true);
     setError(null);
+    st.clearSyncError();
     const err = await st.sendCode(email);
     setBusy(false);
     if (err) setError(friendly(err));
@@ -49,7 +50,7 @@ export function SignIn() {
             {step === 'email' ? (
               <>
                 <BodyBold>Sign in with your email</BodyBold>
-                <Small>Use the email Hogan has for you. We'll send you a 6-digit code. No password needed.</Small>
+                <Small>Use the email Hogan has for you. We'll email you a sign-in link. No password needed.</Small>
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
@@ -65,12 +66,15 @@ export function SignIn() {
                   style={input}
                   accessibilityLabel="Email address"
                 />
-                <Button full icon="send" title={busy ? 'Sending…' : 'Send me a code'} disabled={!validEmail || busy} onPress={send} />
+                <Button full icon="send" title={busy ? 'Sending…' : 'Email me a sign-in link'} disabled={!validEmail || busy} onPress={send} />
               </>
             ) : (
               <>
                 <BodyBold>Check your email</BodyBold>
-                <Small>We sent a 6-digit code to {email.trim()}. It can take a minute, and check your junk folder.</Small>
+                <Body>
+                  We sent a sign-in link to {email.trim()}. Open the email <Text style={{ fontFamily: fonts.bold }}>on this phone</Text> and tap the link. TrainHog opens and you're in.
+                </Body>
+                <Small>It can take a minute. Check your junk folder too. If the email has a 6-digit code, you can type it here instead:</Small>
                 <TextInput
                   value={code}
                   onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 8))}
@@ -91,10 +95,10 @@ export function SignIn() {
                 </View>
               </>
             )}
-            {error ? (
+            {error || st.syncError ? (
               <View style={{ flexDirection: 'row', gap: 8, backgroundColor: c.warnSoft, padding: 12, borderRadius: 12 }}>
                 <Icon name="alert" size={20} color={c.warn} />
-                <Body style={{ flex: 1 }}>{error}</Body>
+                <Body style={{ flex: 1 }}>{error ?? st.syncError}</Body>
               </View>
             ) : null}
           </Card>

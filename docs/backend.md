@@ -15,7 +15,7 @@ it runs on demo data, so nothing breaks before setup.
 
 ## How people get in
 
-- No passwords. People type their email, get a 6-digit code, and type it in (`signInWithOtp` + `verifyOtp`).
+- No passwords. People type their email and get a sign-in link (`signInWithOtp` with `emailRedirectTo: trainhog://auth`). Tapping it on the phone opens the app, which finishes sign-in from the link (`signInFromLink` in `src/data/backend.ts`). If the email template ever includes `{{ .Token }}`, the 6-digit code box works too (`verifyOtp`).
 - Right after sign-in the app calls `claim_account()`. That links the login to:
   - a **trainer** if the email is in `trainer_invites`, or
   - a **client** if a trainer has added a client with that email.
@@ -31,10 +31,9 @@ Row-level security is on for every table. Trainers can read and write everything
 1. Create a project called TrainHog in the London region.
 2. Run both migration files, in order.
 3. Add the trainers: `insert into trainer_invites (email, business_id) values ('<email>', '7a1e5b0d-0000-4000-a000-000000000001');`
-4. Authentication > Emails > **Magic Link** template: change the body so it shows the code:
-   `<h2>Your TrainHog code</h2><p>Type this code in the app: <strong>{{ .Token }}</strong></p>`
+4. Authentication > URL Configuration > Redirect URLs: add `trainhog://**` (the phone app) and `https://rarchie2.github.io/TrainHog/**` (the web app). Without these, the email link goes to the Site URL instead of the app.
 5. Put the project URL and publishable key in `src/config.ts`.
-6. Optional, before more than a handful of clients: set up a custom SMTP sender (e.g. Resend). Supabase's built-in email only sends a few emails an hour.
+6. Before more than a handful of clients: set up a custom SMTP sender (e.g. Resend with a verified domain). Supabase's built-in email sends only about 2 emails an hour, and its templates can't be edited. With custom SMTP, the Magic Link template can also show `{{ .Token }}` as a code.
 
 ## Ready for later
 

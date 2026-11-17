@@ -5,8 +5,9 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import * as Linking from 'expo-linking';
 import { AppState } from 'react-native';
-import { supabase, uuid } from './backend';
+import { authRedirectUrl, signInFromLink, supabase, uuid } from './backend';
 import { type Account, claimAccount, type LoadedData, loadAll, save } from './remote';
 import * as seed from './sample';
 import type {
@@ -185,21 +186,40 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => {
+    // The sign-in email's link opens the app (trainhog://auth#access_token=…).
+    const fromLink = async (url: string | null) => {
+      if (!url || !/access_token=|[?&]code=|error_description=/.test(url)) return false;
+      const err = await signInFromLink(url);
+      if (err) set((s) => ({ ...s, syncError: err, mode: s.mode === 'loading' ? 'signedOut' : s.mode }));
+      else {
+        set((s) => ({ ...s, mode: 'loading' }));
+        await loadLive();
+      }
+      return true;
+    };
+    const linkSub = Linking.addEventListener('url', ({ url }) => {
+      fromLink(url);
+    });
+    (async () => {
+      if (await fromLink(await Linking.getInitialURL())) return;
+      const { data } = await supabase.auth.getSession();
       if (data.session) loadLive();
       else set((s) => (s.mode === 'loading' ? { ...s, mode: 'signedOut' } : s));
-    });
+    })();
     // Pick up new check-ins and messages when the app comes back on screen.
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active' && ref.current.mode === 'live') loadLive(true);
     });
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      linkSub.remove();
+    };
   }, [loadLive]);
 
   const startDemo = useCallback(() => set((s) => ({ ...s, ...demoData(), mode: 'demo', account: null, role: 'client', clientId: 'c1', syncError: null })), []);
   const sendCode = useCallback(async (email: string) => {
     if (!supabase) return 'Sign-in is not set up yet.';
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true } });
+    const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true, emailRedirectTo: authRedirectUrl() } });
     return error ? error.message : null;
   }, []);
   const verifyCode = useCallback(
