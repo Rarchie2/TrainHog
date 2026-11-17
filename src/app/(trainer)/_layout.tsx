@@ -1,4 +1,4 @@
-import { router, Slot } from 'expo-router';
+import { Redirect, router, Slot } from 'expo-router';
 import { useEffect } from 'react';
 import { Shell } from '@/components/Shell';
 import { BodyBold, Button, Card, Small } from '@/components/ui';
@@ -8,6 +8,8 @@ export default function TrainerLayout() {
   const st = useStore();
   useEffect(() => st.setRole('trainer'), [st.setRole]);
   const unread = st.pain.filter((p) => p.status === 'new').length + st.logs.filter((l) => l.checkIn && !l.seenByTrainer).length + st.weekly.filter((w) => !w.seenByTrainer).length;
+  // Clients signed in for real can't open the coach dashboard.
+  if (st.mode === 'live' && !st.account?.trainer) return <Redirect href="/" />;
   const active = st.clients.filter((c) => c.invite === 'joined').length;
   return (
     <Shell
@@ -22,7 +24,10 @@ export default function TrainerLayout() {
           <BodyBold>{active} active clients</BodyBold>
           <Small>Founder plan</Small>
           <Button small icon="plus" title="Add client" onPress={() => router.navigate('/coach/clients?add=1')} />
-          <Button small variant="ghost" icon="switch" title="View client app" onPress={() => router.navigate('/')} />
+          <Button small variant="ghost" icon="switch" title="View client app" onPress={() => {
+              st.setRole('client');
+              router.navigate('/');
+            }} />
         </Card>
       }
     >

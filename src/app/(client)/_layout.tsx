@@ -1,4 +1,4 @@
-import { router, Slot } from 'expo-router';
+import { Redirect, router, Slot } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Shell } from '@/components/Shell';
@@ -6,8 +6,13 @@ import { Button, Card, Small, BodyBold } from '@/components/ui';
 import { useStore } from '@/data/store';
 
 export default function ClientLayout() {
-  const { setRole } = useStore();
-  useEffect(() => setRole('client'), [setRole]);
+  const { setRole, mode, role, account } = useStore();
+  const coachHome = mode === 'live' && account?.trainer && role === 'trainer';
+  useEffect(() => {
+    if (!coachHome) setRole('client');
+  }, [setRole, coachHome]);
+  // A trainer signing in lands on their dashboard, not the client app.
+  if (coachHome) return <Redirect href="/coach" />;
   return (
     <Shell
       subtitle="with Hogan"

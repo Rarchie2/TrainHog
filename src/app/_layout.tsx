@@ -11,7 +11,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StoreProvider } from '@/data/store';
+import { Loading, NoAccount, SignIn, SyncBanner } from '@/components/SignIn';
+import { StoreProvider, useStore } from '@/data/store';
 import { colors } from '@/theme';
 
 export default function RootLayout() {
@@ -29,8 +30,22 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StoreProvider>
         <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+        <Gate />
       </StoreProvider>
     </SafeAreaProvider>
+  );
+}
+
+// Sign-in first when the app is connected to the database.
+function Gate() {
+  const { mode } = useStore();
+  if (mode === 'loading') return <Loading />;
+  if (mode === 'signedOut') return <SignIn />;
+  if (mode === 'noAccount') return <NoAccount />;
+  return (
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+      <SyncBanner />
+    </View>
   );
 }
