@@ -122,6 +122,16 @@ export type Assignment = {
   favourite?: boolean;
   isNew?: boolean;
   plan?: SessionExercise[]; // this client's own sets, reps, weight and rest
+  createdOn?: string; // ISO date, so a weekly session only counts as missed after it was set
+};
+
+// A session on a specific date in a client's calendar (Hogan taps a day to add one).
+export type PlannedSession = {
+  id: ID;
+  clientId: ID;
+  sessionId: ID;
+  date: string; // ISO date
+  position: number; // order within the day
 };
 
 export type Feel = 1 | 2 | 3 | 4 | 5; // Really hard ... Really easy

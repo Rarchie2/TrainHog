@@ -9,6 +9,7 @@ import type {
   CommunityPost,
   DiaryEntry,
   InPersonSession,
+  PlannedSession,
   LiftEntry,
   WeeklyCheckIn,
   Exercise,
@@ -222,7 +223,7 @@ export const clients: Client[] = [
   cl({ id: 'c9', firstName: 'Jo', lastName: 'Pearce', initials: 'JP', contact: 'jo@example.com', ageGroup: 'adult', goals: 'To be agreed.', conditions: 'Unknown.', trainerNotes: 'First session next week.', programme: 'No plan yet', easyView: false, invite: 'sent', lastActive: 'Not joined yet', daysSinceActive: 99 }),
 ];
 
-const as = (id: string, clientId: string, sessionId: string, days: string[], extra: Partial<Assignment> = {}): Assignment => ({ id, clientId, sessionId, days, ...extra });
+const as = (id: string, clientId: string, sessionId: string, days: string[], extra: Partial<Assignment> = {}): Assignment => ({ id, clientId, sessionId, days, createdOn: isoDate(new Date()), ...extra });
 
 export const assignments: Assignment[] = [
   as('a1', 'c1', 's1', ['Thu']),
@@ -351,4 +352,16 @@ export const inPerson: InPersonSession[] = [
   { id: 'ip2', clientId: 'c1', date: isoDate(daysAgo(0)), time: '12:00', place: 'The gym' },
   { id: 'ip3', clientId: 'c3', date: isoDate(daysAgo(0)), time: '17:30', place: 'The gym' },
   { id: 'ip4', clientId: 'c6', date: isoDate(daysAgo(-1)), time: '07:00', place: 'The gym' },
+];
+
+// Calendar sessions on specific dates. Sarah missed Upper body B three days
+// ago, so the demo shows the red marker and the note to Hogan.
+const pl = (id: string, clientId: string, sessionId: string, n: number, position = 0): PlannedSession => ({ id, clientId, sessionId, date: isoDate(daysAgo(n)), position });
+export const planned: PlannedSession[] = [
+  pl('p1', 'c1', 's2', 3),
+  pl('p2', 'c1', 's1', 2),
+  pl('p3', 'c1', 's3', -2),
+  pl('p4', 'c1', 's5', -4),
+  pl('p5', 'c3', 's1', 4),
+  pl('p6', 'c3', 's5', -1),
 ];

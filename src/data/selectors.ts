@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { DAY_NAMES, isoDate } from './sample';
 import { useStore } from './store';
-import type { Assignment, Category, ID, Session } from './types';
+import type { Assignment, Category, ID, PlannedSession, Session, SessionLog } from './types';
 import { WEEKLY_DAY } from './weekly';
 
 export function startOfWeek(d = new Date()) {
@@ -24,6 +24,39 @@ export function checkInWeekStart(d = new Date()) {
 
 // Is this assignment on the given day? "Daily" means every day.
 export const onDay = (a: Assignment, dayName: string) => a.days.includes(dayName) || a.days.includes('Daily');
+
+export type DayItem = { session: Session; done?: SessionLog; planned?: PlannedSession; assignment?: Assignment };
+
+// Everything on one client's day: sessions Hogan put on that date in the
+// calendar, plus weekly sessions on that weekday. Each says if it was done.
+export function dayItems(
+  st: { planned: PlannedSession[]; assignments: Assignment[]; sessions: Session[]; logs: SessionLog[] },
+  clientId: ID,
+  iso: string,
+): DayItem[] {
+  const name = DAY_NAMES[new Date(iso + 'T12:00:00').getDay()];
+  const logs = st.logs.filter((l) => l.clientId === clientId && l.date === iso);
+  const used = new Set<string>();
+  const doneFor = (sessionId: ID) => {
+    const l = logs.find((x) => x.sessionId === sessionId && !used.has(x.id));
+    if (l) used.add(l.id);
+    return l;
+  };
+  const dated = st.planned
+    .filter((p) => p.clientId === clientId && p.date === iso)
+    .sort((a, b) => a.position - b.position)
+    .map((p) => ({ planned: p, session: st.sessions.find((x) => x.id === p.sessionId) }));
+  const weekly = st.assignments
+    .filter((a) => a.clientId === clientId && onDay(a, name) && (!a.createdOn || a.createdOn <= iso))
+    .filter((a) => !dated.some((d) => d.planned.sessionId === a.sessionId))
+    .map((a) => ({ assignment: a, session: st.sessions.find((x) => x.id === a.sessionId) }));
+  return [...dated, ...weekly]
+    .filter((x): x is typeof x & { session: Session } => !!x.session)
+    .map((x) => ({ ...x, done: doneFor(x.session.id) }));
+}
+
+// A day before today with a planned session that wasn't done.
+export const isMissed = (items: DayItem[], iso: string) => iso < isoDate(new Date()) && items.some((x) => !x.done);
 
 // Warm-ups and mobility go first when a client has more than one session on a day.
 const DAY_ORDER: Partial<Record<Category, number>> = { 'Warm-ups': 0, Mobility: 1 };
@@ -51,14 +84,11 @@ export function useClientData(clientId: ID) {
     const weeklyDue = !lastWeekly || lastWeekly < weekStart;
     // Pop up once per check-in week, only while it's due. The card on Today stays until it's done.
     const weeklyPopup = weeklyDue && s.weeklyPromptSeen[clientId] !== weekStart;
-    const todayName = DAY_NAMES[new Date().getDay()];
     const todayIso = isoDate(new Date());
 
     // Everything planned for today, in order (e.g. mobility warm-up, then weights).
-    const today = mySessions
-      .filter((x) => onDay(x.assignment, todayName))
-      .sort((a, b) => dayRank(a.session.category) - dayRank(b.session.category))
-      .map((x) => ({ ...x, done: logs.find((l) => l.sessionId === x.session.id && l.date === todayIso) }));
+    const today = dayItems(s, clientId, todayIso)
+      .sort((a, b) => (a.planned ? 0 : 1) - (b.planned ? 0 : 1) || dayRank(a.session.category) - dayRank(b.session.category));
     const planned = today.find((x) => !x.done) ?? today[0] ?? mySessions[0];
     const doneToday = planned ? logs.find((l) => l.sessionId === planned.session.id && l.date === todayIso) : undefined;
     const missingCheckIn = logs.find((l) => !l.checkIn);
@@ -68,15 +98,17 @@ export function useClientData(clientId: ID) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const iso = isoDate(d);
-      const name = DAY_NAMES[d.getDay()];
+      const items = dayItems(s, clientId, iso);
       return {
-        label: name,
+        label: DAY_NAMES[d.getDay()],
         date: d.getDate(),
         iso,
         isToday: iso === todayIso,
         done: logs.some((l) => l.date === iso),
-        planned: mySessions.some((x) => onDay(x.assignment, name)),
-        count: mySessions.filter((x) => onDay(x.assignment, name)).length,
+        planned: items.length > 0,
+        count: items.length,
+        items,
+        missed: isMissed(items, iso),
         note: diary.some((e) => e.date === iso),
         isPast: d < new Date(new Date().setHours(0, 0, 0, 0)),
       };
@@ -104,5 +136,5 @@ export function useClientData(clientId: ID) {
     }
 
     return { mySessions, logs, diary, pain, messages, weekly, weeklyDue, weeklyPopup, weekStart, today, planned, doneToday, missingCheckIn, week, plannedThisWeek, doneThisWeek, categories, streak };
-  }, [s.assignments, s.sessions, s.logs, s.diary, s.pain, s.messages, s.weekly, s.weeklyDoneOn, s.weeklyPromptSeen, clientId]);
+  }, [s.assignments, s.planned, s.sessions, s.logs, s.diary, s.pain, s.messages, s.weekly, s.weeklyDoneOn, s.weeklyPromptSeen, clientId]);
 }

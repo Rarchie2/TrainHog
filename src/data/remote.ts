@@ -14,6 +14,7 @@ import type {
   ExerciseChange,
   ID,
   InPersonSession,
+  PlannedSession,
   LiftEntry,
   Message,
   PainReport,
@@ -42,6 +43,7 @@ export type LoadedData = {
   weekly: WeeklyCheckIn[];
   posts: CommunityPost[];
   inPerson: InPersonSession[];
+  planned: PlannedSession[];
 };
 
 type Row = Record<string, any>;
@@ -85,7 +87,7 @@ async function all(table: string, order?: string): Promise<Row[]> {
 
 // Everything this person may see (the database's rules do the filtering).
 export async function loadAll(account: Account): Promise<LoadedData> {
-  const [clients, priv, members, exercises, sessions, assignments, logs, pain, diary, replies, messages, bodyweights, lifts, weekly, posts, reactions, inPerson] =
+  const [clients, priv, members, exercises, sessions, assignments, logs, pain, diary, replies, messages, bodyweights, lifts, weekly, posts, reactions, inPerson, planned] =
     await Promise.all([
       all('clients'),
       account.trainer ? all('client_private') : Promise.resolve([]),
@@ -104,6 +106,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       all('community_posts', 'created_at'),
       all('post_reactions'),
       all('in_person'),
+      all('planned_sessions'),
     ]);
 
   const lastLog = new Map<string, string>();
@@ -189,6 +192,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       favourite: a.favourite,
       isNew: a.is_new,
       plan: a.plan ?? undefined,
+      createdOn: a.created_at ? isoDate(new Date(a.created_at)) : undefined,
     })),
     logs: logs.map((l) => ({
       id: l.id,
@@ -241,6 +245,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       reactions: reactionMap.get(p.id) ?? {},
     })),
     inPerson: inPerson.map((i) => ({ id: i.id, clientId: i.client_id, date: i.date, time: i.time, place: i.place })),
+    planned: planned.map((x) => ({ id: x.id, clientId: x.client_id, sessionId: x.session_id, date: x.date, position: x.position ?? 0 })),
   };
 }
 
@@ -270,6 +275,9 @@ export const save = {
   message: (b: ID, m: Message) => ok(db().from('messages').insert({ id: m.id, business_id: b, client_id: m.clientId, text: m.text }), 'the message'),
   assignment: (b: ID, a: Assignment) =>
     ok(db().from('assignments').upsert({ id: a.id, business_id: b, client_id: a.clientId, session_id: a.sessionId, days: a.days, favourite: !!a.favourite, is_new: !!a.isNew, plan: a.plan ?? null }), 'the assignment'),
+  plan: (b: ID, rows: PlannedSession[]) =>
+    ok(db().from('planned_sessions').insert(rows.map((x) => ({ id: x.id, business_id: b, client_id: x.clientId, session_id: x.sessionId, date: x.date, position: x.position }))), 'the calendar'),
+  unplan: (id: ID) => ok(db().from('planned_sessions').delete().eq('id', id), 'the calendar'),
   unassign: (id: ID) => ok(db().from('assignments').delete().eq('id', id), 'the change'),
   session: (b: ID, s: Session) =>
     ok(

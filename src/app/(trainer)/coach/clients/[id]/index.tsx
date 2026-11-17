@@ -186,7 +186,8 @@ export default function ClientDetail() {
             {who.programme} · Last active {who.lastActive.toLowerCase()}
           </Small>
         </View>
-        <Button small variant="ghost" icon="cal" title="Last 7 days" onPress={() => router.navigate(`/coach/clients/${who.id}/week`)} />
+        <Button small icon="cal" title="Calendar" onPress={() => router.navigate(`/coach/clients/${who.id}/calendar`)} />
+        <Button small variant="ghost" icon="list" title="Last 7 days" onPress={() => router.navigate(`/coach/clients/${who.id}/week`)} />
         {who.invite !== 'joined' ? <Button small variant="ghost" icon="send" title="Resend invite" /> : null}
       </View>
       {d.pain.map((p) => (

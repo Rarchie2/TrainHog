@@ -20,6 +20,7 @@ import type {
   ExerciseChange,
   ID,
   Message,
+  PlannedSession,
   PainReport,
   Reply,
   Session,
@@ -76,9 +77,10 @@ function demoData(): LoadedData {
     weekly: seed.weeklyCheckIns,
     posts: seed.communityPosts,
     inPerson: seed.inPerson,
+    planned: seed.planned,
   };
 }
-const EMPTY: LoadedData = { clients: [], exercises: [], sessions: [], assignments: [], logs: [], pain: [], diary: [], replies: [], messages: [], bodyweights: [], lifts: [], weekly: [], posts: [], inPerson: [] };
+const EMPTY: LoadedData = { clients: [], exercises: [], sessions: [], assignments: [], logs: [], pain: [], diary: [], replies: [], messages: [], bodyweights: [], lifts: [], weekly: [], posts: [], inPerson: [], planned: [] };
 
 function initialState(): State {
   return {
@@ -122,6 +124,9 @@ type Actions = {
   updateExercise: (id: ID, patch: Partial<Omit<Exercise, 'id' | 'businessId'>>) => void;
   assign: (clientId: ID, sessionId: ID, days?: string[]) => void;
   setDays: (assignmentId: ID, days: string[]) => void;
+  planSession: (clientId: ID, sessionId: ID, date: string) => void;
+  unplan: (id: ID) => void;
+  copyWeek: (clientId: ID, fromMonday: string, weeks: number) => number; // how many sessions were added
   unassign: (assignmentId: ID) => void;
   addClient: (firstName: string, lastName: string, contact: string, easyView: boolean) => void;
   reset: () => void;
@@ -446,6 +451,49 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     [updateAssignment, remote],
   );
+  // Calendar: put a session on a date, take it off, or copy a week forward.
+  const planSession = useCallback(
+    (clientId: ID, sessionId: ID, date: string) => {
+      const sameDay = ref.current.planned.filter((x) => x.clientId === clientId && x.date === date);
+      const p: PlannedSession = { id: newId(), clientId, sessionId, date, position: sameDay.length };
+      set((s) => ({ ...s, planned: [...s.planned, p] }));
+      remote(() => save.plan(biz(), [p]));
+    },
+    [remote],
+  );
+  const unplan = useCallback(
+    (id: ID) => {
+      set((s) => ({ ...s, planned: s.planned.filter((x) => x.id !== id) }));
+      remote(() => save.unplan(id));
+    },
+    [remote],
+  );
+  const copyWeek = useCallback(
+    (clientId: ID, fromMonday: string, weeks: number) => {
+      const start = new Date(fromMonday + 'T12:00:00');
+      const inWeek = (iso: string, k: number) => {
+        const d = Math.round((new Date(iso + 'T12:00:00').getTime() - start.getTime()) / 86400000);
+        return d >= k * 7 && d < k * 7 + 7;
+      };
+      const source = ref.current.planned.filter((x) => x.clientId === clientId && inWeek(x.date, 0));
+      const added: PlannedSession[] = [];
+      for (let w = 1; w <= weeks; w++) {
+        for (const x of source) {
+          const d = new Date(x.date + 'T12:00:00');
+          d.setDate(d.getDate() + 7 * w);
+          const date = seed.isoDate(d);
+          const taken = [...ref.current.planned, ...added].some((y) => y.clientId === clientId && y.date === date && y.sessionId === x.sessionId);
+          if (!taken) added.push({ id: newId(), clientId, sessionId: x.sessionId, date, position: x.position });
+        }
+      }
+      if (added.length) {
+        set((s) => ({ ...s, planned: [...s.planned, ...added] }));
+        remote(() => save.plan(biz(), added));
+      }
+      return added.length;
+    },
+    [remote],
+  );
   const setDays = useCallback((assignmentId: ID, days: string[]) => updateAssignment(assignmentId, { days }), [updateAssignment]);
   const setPlan = useCallback((assignmentId: ID, plan: SessionExercise[]) => updateAssignment(assignmentId, { plan, isNew: true }), [updateAssignment]);
   const unassign = useCallback(
@@ -544,7 +592,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions: Actions = {
     setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage,
-    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
+    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
     setCommunity, post, react, setPlan, reset, startDemo, sendCode, verifyCode, signOut, refresh, refreshAccount, clearSyncError,
   };
   // Every action above is stable (useCallback), so this only changes with the data.

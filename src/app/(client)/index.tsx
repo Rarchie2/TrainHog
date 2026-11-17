@@ -105,7 +105,7 @@ function CleanToday() {
           {d.today.filter((x) => x.done).length} of {d.today.length} done. Do them in this order or however suits you.
         </Small>
         {d.today.map((x, n) => (
-          <View key={x.assignment.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 }}>
+          <View key={x.planned?.id ?? x.assignment?.id ?? x.session.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 }}>
             <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: x.done ? c.brand : c.brandSoft }}>
               {x.done ? <Icon name="check" size={16} color={c.brandInk} /> : <Text style={{ fontFamily: fonts.heavy, color: c.brandText }}>{n + 1}</Text>}
             </View>
@@ -173,6 +173,28 @@ function CleanToday() {
           </View>
         ))}
       </View>
+      {d.week.some((day) => day.items.length) ? (
+        <View style={{ gap: 2 }}>
+          {d.week
+            .filter((day) => day.items.length)
+            .map((day) =>
+              day.items.map((x, n) => (
+                <Pressable
+                  key={`${day.iso}-${n}`}
+                  accessibilityRole="button"
+                  onPress={() => router.navigate(`/sessions/${x.session.id}`)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, borderTopWidth: 1, borderTopColor: c.line }}
+                >
+                  <Text style={{ width: 54, fontFamily: day.isToday ? fonts.heavy : fonts.semibold, color: day.isToday ? c.brandText : c.muted, fontSize: 14 }}>{n === 0 ? `${day.label} ${day.date}` : ''}</Text>
+                  <Text style={{ flex: 1, fontFamily: fonts.semibold, color: c.ink, fontSize: 15 }} numberOfLines={1}>
+                    {x.session.name}
+                  </Text>
+                  {x.done ? <Tag label="Done" tone="ok" icon="check" /> : day.isPast ? <Tag label="Missed" tone="neutral" /> : null}
+                </Pressable>
+              )),
+            )}
+        </View>
+      ) : null}
       <View style={{ flexDirection: 'row', gap: 14, flexWrap: 'wrap' }}>
         <Legend color={c.brandText} label="Done" filled />
         <Legend color={c.brandText} label="Planned" />
