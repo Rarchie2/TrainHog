@@ -1,16 +1,20 @@
-// Design tokens for the white and blue direction (concept A, "Clean cards").
-// Swap `brand` for Hogan's exact brand blue once we have it.
+// Design tokens in JMH Fitness colours: Jamie's blue (#009FE3) and black
+// (#1D1D1B), on a mix of white and light blue backgrounds.
+//   brand     the blue for buttons, bars and badges (black text on top)
+//   brandText a deeper shade of the same blue for text and icons on white,
+//             because #009FE3 is too light to read as text
 
 export const colors = {
-  bg: '#F5F7FB',
+  bg: '#F2F8FC',
   surface: '#FFFFFF',
-  surface2: '#EDF1F8',
-  ink: '#0F1A2E',
-  muted: '#55617A',
-  line: '#DCE2EC',
-  brand: '#1E5BD8',
-  brandInk: '#FFFFFF',
-  brandSoft: '#E3ECFD',
+  surface2: '#E8F2F8',
+  ink: '#1D1D1B',
+  muted: '#575B61',
+  line: '#D9E4EB',
+  brand: '#009FE3',
+  brandInk: '#1D1D1B',
+  brandText: '#0076A8',
+  brandSoft: '#E0F3FC',
   warn: '#9A5B00',
   warnSoft: '#FCF0DC',
   // Red is reserved for pain and safety. Never use it for anything else.
@@ -24,10 +28,12 @@ export const colors = {
 export const easyColors = {
   ...colors,
   bg: '#FFFFFF',
-  ink: '#07101F',
-  muted: '#2E3A50',
-  line: '#8C99B0',
-  brand: '#1748B0',
+  ink: '#111111',
+  muted: '#33373C',
+  line: '#8A98A3',
+  brand: '#0076A8',
+  brandInk: '#FFFFFF',
+  brandText: '#00618C',
 } as const;
 
 export type Palette = { [K in keyof typeof colors]: string };

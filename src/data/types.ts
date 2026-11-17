@@ -42,10 +42,30 @@ export type Client = {
   community?: boolean; // opted in to the community feed
 };
 
+// Hogan's library categories: stretches, drills, cardio and each muscle group.
+export type ExerciseCategory =
+  | 'Dynamic stretches'
+  | 'Static stretches'
+  | 'Drills'
+  | 'Cardiovascular'
+  | 'Chest'
+  | 'Back'
+  | 'Shoulders'
+  | 'Biceps'
+  | 'Triceps'
+  | 'Core'
+  | 'Glutes'
+  | 'Quads'
+  | 'Hamstrings'
+  | 'Calves'
+  | 'Full body';
+
 export type Exercise = {
   id: ID;
   businessId: ID;
   name: string;
+  category?: ExerciseCategory;
+  videoUrl?: string; // e.g. an unlisted YouTube or Vimeo link
   videoLength: string; // e.g. "0:18"
   coachingNotes: string;
   steps: string[];
@@ -54,12 +74,26 @@ export type Exercise = {
   tags: string[];
 };
 
+// The parts of a session, in the order they happen.
+export type SectionId = 'cv-warmup' | 'mobility' | 'specific-mobility' | 'drills' | 'main' | 'cv-finisher' | 'cooldown';
+
+// Weights session or CV session: decides which parts are offered.
+export type SessionKind = 'weights' | 'cv';
+
 export type SessionExercise = {
   exerciseId: ID;
+  section?: SectionId; // missing means the main part
   sets: number;
   reps?: string; // "10" or "8 each side"
   time?: string; // "30 sec"
   weight?: string;
+  tempo?: string; // e.g. "3-1-1-0" (3 seconds down)
+  effort?: number; // 1 to 10
+  effortScale?: 'RPE' | 'RIR';
+  // Joined to the next exercise: a superset (no rest between) or a circuit
+  // (no rest between, rest after the round).
+  join?: 'superset' | 'circuit';
+  dropSet?: boolean;
   restSec: number;
   note?: string;
   ifStruggling?: string; // Hogan's tip if the client can't manage it
@@ -70,6 +104,7 @@ export type Session = {
   businessId: ID;
   name: string;
   category: Category;
+  kind?: SessionKind;
   minutes: number;
   equipment: string;
   level: 1 | 2 | 3;
@@ -160,6 +195,7 @@ export type ExerciseChange = {
   exerciseId: ID;
   kinds: ChangeKind[];
   weightUsed?: string;
+  repsDone?: string;
   note?: string;
 };
 

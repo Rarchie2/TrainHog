@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleProp,
@@ -10,7 +11,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useMe, useStore } from '@/data/store';
 import type { Category, Feel } from '@/data/types';
 import { BREAKPOINTS, colors, easyColors, fonts, radius, TOUCH, type Palette } from '@/theme';
@@ -117,7 +118,7 @@ export function Button({ title, onPress, icon, variant = 'primary', small, full,
 }) {
   const { c, k } = useUI();
   const bg = { primary: c.brand, ghost: c.surface2, warn: c.warn, danger: c.bad, outline: 'transparent' }[variant];
-  const fg = { primary: c.brandInk, ghost: c.ink, warn: '#FFFFFF', danger: '#FFFFFF', outline: c.brand }[variant];
+  const fg = { primary: c.brandInk, ghost: c.ink, warn: '#FFFFFF', danger: '#FFFFFF', outline: c.brandText }[variant];
   const h = small ? TOUCH * k * 0.92 : 54 * k;
   return (
     <Pressable
@@ -153,6 +154,7 @@ export function Button({ title, onPress, icon, variant = 'primary', small, full,
 export function Chip({ label, on, onPress, icon, tone }: { label: string; on?: boolean; onPress?: () => void; icon?: IconName; tone?: 'danger' }) {
   const { c, k } = useUI();
   const active = on && tone === 'danger' ? c.bad : c.brand;
+  const activeInk = on && tone === 'danger' ? '#FFFFFF' : c.brandInk;
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
@@ -170,8 +172,8 @@ export function Chip({ label, on, onPress, icon, tone }: { label: string; on?: b
         gap: 6,
       }}
     >
-      {icon ? <Icon name={icon} size={18} color={on ? '#FFFFFF' : c.ink} /> : null}
-      <Text style={{ fontFamily: fonts.bold, fontSize: Math.round(15 * k), color: on ? '#FFFFFF' : c.ink }}>{label}</Text>
+      {icon ? <Icon name={icon} size={18} color={on ? activeInk : c.ink} /> : null}
+      <Text style={{ fontFamily: fonts.bold, fontSize: Math.round(15 * k), color: on ? activeInk : c.ink }}>{label}</Text>
     </Pressable>
   );
 }
@@ -179,7 +181,7 @@ export function Chip({ label, on, onPress, icon, tone }: { label: string; on?: b
 export function Tag({ label, tone = 'brand', icon }: { label: string; tone?: 'brand' | 'warn' | 'danger' | 'neutral' | 'ok'; icon?: IconName }) {
   const { c, k } = useUI();
   const map = {
-    brand: [c.brandSoft, c.brand],
+    brand: [c.brandSoft, c.brandText],
     warn: [c.warnSoft, c.warn],
     danger: [c.badSoft, c.bad],
     neutral: [c.surface2, c.muted],
@@ -198,30 +200,31 @@ export function Avatar({ initials, size = 40, brand }: { initials: string; size?
   const { c } = useUI();
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: brand ? c.brand : c.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontFamily: fonts.heavy, fontSize: size * 0.36, color: brand ? c.brandInk : c.brand }}>{initials}</Text>
+      <Text style={{ fontFamily: fonts.heavy, fontSize: size * 0.36, color: brand ? c.brandInk : c.brandText }}>{initials}</Text>
     </View>
   );
 }
 
 // The Snout barbell: a barbell whose plates are pig snouts.
+// Jamie's JMH Fitness mark, on a white tile so it reads on any background.
+const JMH_MARK = require('../../assets/jmh-mark.png');
+const JMH_LOGO = require('../../assets/jmh-logo.png');
+
 export function Mark({ size = 36 }: { size?: number }) {
+  const { c } = useUI();
   return (
-    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel="TrainHog">
-      <Defs>
-        <LinearGradient id="markGrad" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#2A6AF0" />
-          <Stop offset="1" stopColor="#123E9C" />
-        </LinearGradient>
-      </Defs>
-      <Rect width={100} height={100} rx={23} fill="url(#markGrad)" />
-      <Rect x={26} y={46} width={48} height={8} rx={4} fill="#FFFFFF" />
-      <Circle cx={25} cy={50} r={15} fill="#FFFFFF" />
-      <Circle cx={75} cy={50} r={15} fill="#FFFFFF" />
-      {[20.5, 29.5, 70.5, 79.5].map((x) => (
-        <Ellipse key={x} cx={x} cy={50} rx={2.8} ry={5.5} fill="#1E5BD8" />
-      ))}
-    </Svg>
+    <View
+      accessibilityLabel="JMH Fitness"
+      style={{ width: size, height: size, borderRadius: size * 0.23, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: c.line, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Image source={JMH_MARK} style={{ width: size * 0.78, height: size * 0.78 * (289 / 600) }} resizeMode="contain" />
+    </View>
   );
+}
+
+// The full JMH Fitness logo (mark and wordmark), for the sign-in screen.
+export function Logo({ width = 220 }: { width?: number }) {
+  return <Image source={JMH_LOGO} accessibilityLabel="JMH Fitness" style={{ width, height: width * (378 / 900) }} resizeMode="contain" />;
 }
 
 export const FEEL_LABELS = ['', 'Really hard', 'Hard', 'About right', 'Fairly easy', 'Really easy'] as const;
@@ -248,7 +251,7 @@ export function Thumb({ label, duration, height, width, compact }: { label: stri
       accessibilityLabel={`Video of Hogan demonstrating ${label}`}
       style={{ width: width ?? '100%', height: height ?? undefined, aspectRatio: height ? undefined : 16 / 9, borderRadius: compact ? 12 : 16, overflow: 'hidden', backgroundColor: c.brand }}
     >
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0B2A6B', opacity: 0.35, transform: [{ translateX: 60 }, { rotate: '18deg' }, { scale: 1.6 }] }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1D1D1B', opacity: 0.18, transform: [{ translateX: 60 }, { rotate: '18deg' }, { scale: 1.6 }] }]} />
       <Svg viewBox="0 0 80 90" style={{ position: 'absolute', right: '8%', top: '8%', height: '88%', width: '45%' }}>
         <Circle cx={46} cy={14} r={8} fill="rgba(255,255,255,0.55)" />
         <Path d="M44 24 36 50l20 6 2 26M36 50l-14 8-2 24M42 32l20 4" stroke="rgba(255,255,255,0.55)" strokeWidth={4} fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -356,7 +359,7 @@ export function SectionHead({ title, action, onAction }: { title: string; action
       <H3>{title}</H3>
       {action ? (
         <Pressable accessibilityRole="button" onPress={onAction} style={{ minHeight: TOUCH, justifyContent: 'center', paddingHorizontal: 4 }}>
-          <Text style={{ color: c.brand, fontFamily: fonts.bold, fontSize: 15 }}>{action}</Text>
+          <Text style={{ color: c.brandText, fontFamily: fonts.bold, fontSize: 15 }}>{action}</Text>
         </Pressable>
       ) : null}
     </View>

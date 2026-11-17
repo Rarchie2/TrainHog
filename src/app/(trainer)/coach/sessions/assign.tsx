@@ -25,8 +25,8 @@ export default function AssignSession() {
   return (
     <Page maxWidth={860}>
       <Pressable accessibilityRole="button" onPress={() => router.navigate('/coach/sessions')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: TOUCH, alignSelf: 'flex-start' }}>
-        <Icon name="back" size={22} color={c.brand} />
-        <BodyBold color={c.brand}>Sessions</BodyBold>
+        <Icon name="back" size={22} color={c.brandText} />
+        <BodyBold color={c.brandText}>Sessions</BodyBold>
       </Pressable>
       <View style={{ gap: 4 }}>
         <Title>Assign {s.name}</Title>

@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, Vibration, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, TextInput, Vibration, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Body, BodyBold, Button, Card, Chip, Eyebrow, H3, Small, Tag, Thumb, Title, useLayout, useUI } from '@/components/ui';
 import { CHANGE_LABELS, holdSeconds, prescription } from '@/data/format';
 import { useLookups, useStore } from '@/data/store';
+import { effortLabel, groupLabel, groups, restAfter, sectionLabel, sectionOf } from '@/data/structure';
 import type { ChangeKind, ExerciseChange } from '@/data/types';
 import { fonts, radius, TOUCH } from '@/theme';
 
@@ -75,9 +76,12 @@ export default function Workout() {
   const e = exercise(cur.exerciseId);
   const position = total - q.length; // how many are finished or skipped
   const secs = holdSeconds(cur);
+  const g = groups(plan);
+  const grp = g[q[0]];
+  const rest = restAfter(plan, q[0], g);
 
   const finish = (completed: string[]) => {
-    const logId = st.finishSession(s.id, completed, Object.values(changes).filter((x) => x.kinds.length || x.note || x.weightUsed));
+    const logId = st.finishSession(s.id, completed, Object.values(changes).filter((x) => x.kinds.length || x.note || x.weightUsed || x.repsDone));
     router.replace(`/checkin/${logId}`);
   };
   const next = (markDone: boolean) => {
@@ -87,7 +91,7 @@ export default function Workout() {
     setQueue(q.slice(1));
     setPanel('none');
     setHolding(0);
-    if (markDone && cur.restSec > 0) setResting(cur.restSec);
+    if (markDone && rest > 0) setResting(rest);
   };
   // Equipment taken? Push this one to the end, or jump to any other.
   const later = () => {
@@ -130,7 +134,7 @@ export default function Workout() {
         {topBar}
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 18 }}>
           <Eyebrow>Rest</Eyebrow>
-          <Text style={{ fontFamily: fonts.displayHeavy, fontSize: Math.round(96 * k), color: c.brand, fontVariant: ['tabular-nums'] }} accessibilityLiveRegion="polite">
+          <Text style={{ fontFamily: fonts.displayHeavy, fontSize: Math.round(96 * k), color: c.brandText, fontVariant: ['tabular-nums'] }} accessibilityLiveRegion="polite">
             {mm}:{ss}
           </Text>
           <Body center>Next up: {e.name}</Body>
@@ -149,7 +153,7 @@ export default function Workout() {
         {topBar}
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 18 }}>
           <Eyebrow>Hold</Eyebrow>
-          <Text style={{ fontFamily: fonts.displayHeavy, fontSize: Math.round(96 * k), color: c.brand, fontVariant: ['tabular-nums'] }} accessibilityLiveRegion="polite">
+          <Text style={{ fontFamily: fonts.displayHeavy, fontSize: Math.round(96 * k), color: c.brandText, fontVariant: ['tabular-nums'] }} accessibilityLiveRegion="polite">
             {holding}s
           </Text>
           <Body center>{e.name}</Body>
@@ -194,24 +198,35 @@ export default function Workout() {
   const mine = changes[cur.exerciseId] ?? { exerciseId: cur.exerciseId, kinds: [] };
   const updateMine = (patch: Partial<ExerciseChange>) => setChanges({ ...changes, [cur.exerciseId]: { ...mine, ...patch } });
   const toggleKind = (kind: ChangeKind) => updateMine({ kinds: mine.kinds.includes(kind) ? mine.kinds.filter((x) => x !== kind) : [...mine.kinds, kind] });
-  const noted = mine.kinds.length > 0 || !!mine.note || !!mine.weightUsed;
+  const noted = mine.kinds.length > 0 || !!mine.note || !!mine.weightUsed || !!mine.repsDone;
   const tip = cur.ifStruggling ?? (e.easier ? `Try the easier version: ${e.easier.toLowerCase()}.` : 'Take a longer rest, lower the weight a little, and do what you can with good form.');
   const input = { minHeight: 48, borderWidth: 1.5, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, fontFamily: fonts.body, fontSize: 16, color: c.ink, backgroundColor: c.surface } as const;
 
+  const effort = effortLabel(cur);
   const numbers = [
-    { label: 'Sets', value: String(cur.sets) },
+    { label: grp?.kind === 'circuit' ? 'Rounds' : 'Sets', value: String(cur.sets) },
     { label: cur.reps ? 'Reps' : secs !== undefined ? 'Hold' : 'Time', value: cur.reps ?? cur.time ?? '-' },
     { label: 'Weight', value: cur.weight ?? 'Body' },
-    { label: 'Rest', value: `${cur.restSec}s` },
+    { label: 'Rest', value: rest ? `${rest}s` : 'None' },
+    ...(cur.tempo ? [{ label: 'Tempo', value: cur.tempo }] : []),
+    ...(effort ? [{ label: cur.effortScale ?? 'RPE', value: String(cur.effort) }] : []),
   ];
+  const nextInGroup = grp && grp.index < grp.size ? exercise(plan[q[0] + 1].exerciseId).name : undefined;
 
   const info = (
     <View style={{ gap: 14 }}>
-      <Eyebrow color={c.brand}>{prescription(cur)}</Eyebrow>
+      <Eyebrow color={c.brandText}>{sectionLabel(sectionOf(cur), s.kind)}</Eyebrow>
       <Title>{e.name}</Title>
-      <View style={{ flexDirection: 'row', gap: 8 }} accessibilityLabel={`From Hogan: ${prescription(cur)}, rest ${cur.restSec} seconds`}>
+      {grp || cur.dropSet ? (
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+          {grp ? <Tag label={groupLabel(grp)} tone="brand" /> : null}
+          {cur.dropSet ? <Tag label="Drop set" tone="warn" /> : null}
+        </View>
+      ) : null}
+      {nextInGroup ? <Small>No rest: go straight into {nextInGroup}.</Small> : null}
+      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityLabel={`From Hogan: ${prescription(cur)}${cur.tempo ? `, tempo ${cur.tempo}` : ''}${effort ? `, ${effort}` : ''}, rest ${rest} seconds`}>
         {numbers.map((n) => (
-          <View key={n.label} style={{ flex: 1, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', gap: 2 }}>
+          <View key={n.label} style={{ flexGrow: 1, flexBasis: '22%', backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', gap: 2 }}>
             <Text style={{ fontFamily: fonts.displayHeavy, fontSize: Math.round(19 * k), color: c.ink, textAlign: 'center' }} numberOfLines={2}>
               {n.value}
             </Text>
@@ -223,7 +238,7 @@ export default function Workout() {
       {secs !== undefined ? <Button full icon="clock" title={`Start ${secs}s hold timer`} onPress={() => setHolding(secs)} /> : null}
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         <Button small variant={panel === 'struggling' ? 'primary' : 'ghost'} icon="alert" title="Struggling?" onPress={() => setPanel(panel === 'struggling' ? 'none' : 'struggling')} />
-        <Button small variant={panel === 'change' ? 'primary' : 'ghost'} icon={noted ? 'check' : 'plus'} title={noted ? 'Change noted' : 'Note a change'} onPress={() => setPanel(panel === 'change' ? 'none' : 'change')} />
+        <Button small variant={panel === 'change' ? 'primary' : 'ghost'} icon={noted ? 'check' : 'plus'} title={noted ? 'Change noted' : 'Did different weight or reps?'} onPress={() => setPanel(panel === 'change' ? 'none' : 'change')} />
         {q.length > 1 ? <Button small variant="ghost" icon="clock" title="Kit taken? Do it later" onPress={later} /> : null}
       </View>
       {panel === 'struggling' ? (
@@ -236,31 +251,38 @@ export default function Workout() {
       ) : null}
       {panel === 'change' ? (
         <Card>
-          <BodyBold>What did you change?</BodyBold>
-          <Small>Hogan sees this with your check-in.</Small>
+          <BodyBold>What did you do?</BodyBold>
+          <Small>Only fill in what was different. Hogan sees this with your check-in.</Small>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <TextInput value={mine.weightUsed ?? ''} onChangeText={(t) => updateMine({ weightUsed: t || undefined })} placeholder={`Weight${cur.weight ? ` (set: ${cur.weight})` : ''}`} placeholderTextColor={c.muted} style={[input, { flex: 1, minWidth: 140 }]} accessibilityLabel="Weight you used" />
+            <TextInput value={mine.repsDone ?? ''} onChangeText={(t) => updateMine({ repsDone: t || undefined })} placeholder={`Reps${cur.reps ? ` (set: ${cur.reps})` : ''}`} placeholderTextColor={c.muted} style={[input, { flex: 1, minWidth: 140 }]} accessibilityLabel="Reps you did" />
+          </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {(Object.keys(CHANGE_LABELS) as ChangeKind[]).map((kind) => (
               <Chip key={kind} label={CHANGE_LABELS[kind]} on={mine.kinds.includes(kind)} onPress={() => toggleKind(kind)} />
             ))}
           </View>
-          <TextInput value={mine.weightUsed ?? ''} onChangeText={(t) => updateMine({ weightUsed: t || undefined })} placeholder={`Weight you used${cur.weight ? ` (Hogan set ${cur.weight})` : ''}`} placeholderTextColor={c.muted} style={input} accessibilityLabel="Weight you used" />
           <TextInput value={mine.note ?? ''} onChangeText={(t) => updateMine({ note: t || undefined })} placeholder="Anything else? For example: knee twinged on set 2" placeholderTextColor={c.muted} multiline style={[input, { minHeight: 70, paddingTop: 10, textAlignVertical: 'top' }]} accessibilityLabel="Note for Hogan" />
           <Button small icon="check" title="Save" onPress={() => setPanel('none')} />
         </Card>
       ) : null}
-      <Card tone="soft">
-        <BodyBold>Hogan says</BodyBold>
-        <Body>{e.coachingNotes}</Body>
-      </Card>
-      <Pressable accessibilityRole="button" onPress={() => setShowSteps(!showSteps)} style={{ minHeight: TOUCH, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <H3>Step by step</H3>
-        <Small>{showSteps ? 'Hide' : 'Show'}</Small>
-      </Pressable>
-      {showSteps
+      {e.coachingNotes ? (
+        <Card tone="soft">
+          <BodyBold>Hogan says</BodyBold>
+          <Body>{e.coachingNotes}</Body>
+        </Card>
+      ) : null}
+      {e.steps.length ? (
+        <Pressable accessibilityRole="button" onPress={() => setShowSteps(!showSteps)} style={{ minHeight: TOUCH, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <H3>Step by step</H3>
+          <Small>{showSteps ? 'Hide' : 'Show'}</Small>
+        </Pressable>
+      ) : null}
+      {showSteps && e.steps.length
         ? e.steps.map((t, n) => (
             <View key={n} style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: c.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontFamily: fonts.heavy, color: c.brand }}>{n + 1}</Text>
+                <Text style={{ fontFamily: fonts.heavy, color: c.brandText }}>{n + 1}</Text>
               </View>
               <Body style={{ flex: 1 }}>{t}</Body>
             </View>
@@ -289,11 +311,10 @@ export default function Workout() {
     <View style={{ gap: 10 }}>
       <Thumb label={e.name} duration={e.videoLength} />
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-        <Button small variant="ghost" icon="film" title="Full how-to video" />
+        <Button small variant="ghost" icon="film" title={e.videoUrl ? 'Watch the video' : 'Video coming soon'} disabled={!e.videoUrl} onPress={() => e.videoUrl && Linking.openURL(e.videoUrl)} />
         <Button small variant="ghost" icon="speaker" title="Read aloud" />
         <Button small variant="ghost" title="Play slower" />
       </View>
-      <Small>Captions are on. Videos are saved to the phone so they work in the gym.</Small>
     </View>
   );
 

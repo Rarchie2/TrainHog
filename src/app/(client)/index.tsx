@@ -70,7 +70,7 @@ function CleanToday() {
           <Thumb label={d.planned.session.name} duration="0:22" />
         </View>
         <View style={{ flex: 1, gap: 12, padding: 8, justifyContent: 'center' }}>
-          <Eyebrow color={c.brand}>{d.today.length > 1 ? `Today's session ${d.today.findIndex((x) => x.session.id === d.planned!.session.id) + 1} of ${d.today.length}` : d.today.length ? "Today's session" : 'Up next'}</Eyebrow>
+          <Eyebrow color={c.brandText}>{d.today.length > 1 ? `Today's session ${d.today.findIndex((x) => x.session.id === d.planned!.session.id) + 1} of ${d.today.length}` : d.today.length ? "Today's session" : 'Up next'}</Eyebrow>
           <H2>{d.planned.session.name}</H2>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 4 }}>
             <Meta icon="clock" text={`${d.planned.session.minutes} min`} />
@@ -89,7 +89,7 @@ function CleanToday() {
             <Button full icon="play" title="Start session" onPress={() => router.navigate(`/workout/${d.planned!.session.id}`)} />
           )}
           <Pressable accessibilityRole="button" onPress={() => router.navigate(`/sessions/${d.planned!.session.id}`)} style={{ alignSelf: 'center', minHeight: 44, justifyContent: 'center' }}>
-            <Text style={{ fontFamily: fonts.bold, color: c.brand, fontSize: 15 }}>See what's in it</Text>
+            <Text style={{ fontFamily: fonts.bold, color: c.brandText, fontSize: 15 }}>See what's in it</Text>
           </Pressable>
         </View>
       </View>
@@ -107,7 +107,7 @@ function CleanToday() {
         {d.today.map((x, n) => (
           <View key={x.assignment.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 }}>
             <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: x.done ? c.brand : c.brandSoft }}>
-              {x.done ? <Icon name="check" size={16} color={c.brandInk} /> : <Text style={{ fontFamily: fonts.heavy, color: c.brand }}>{n + 1}</Text>}
+              {x.done ? <Icon name="check" size={16} color={c.brandInk} /> : <Text style={{ fontFamily: fonts.heavy, color: c.brandText }}>{n + 1}</Text>}
             </View>
             <View style={{ flex: 1 }}>
               <BodyBold numberOfLines={1}>{x.session.name}</BodyBold>
@@ -154,7 +154,7 @@ function CleanToday() {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         {d.week.map((day) => (
           <View key={day.iso} style={{ alignItems: 'center', gap: 6, flex: 1 }} accessibilityLabel={`${day.label} ${day.date}${day.done ? ', done' : day.planned ? ', planned' : ''}`}>
-            <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: day.isToday ? c.brand : c.muted }}>{day.label[0]}</Text>
+            <Text style={{ fontFamily: fonts.bold, fontSize: 13, color: day.isToday ? c.brandText : c.muted }}>{day.label[0]}</Text>
             <View
               style={{
                 width: 38,
@@ -174,8 +174,8 @@ function CleanToday() {
         ))}
       </View>
       <View style={{ flexDirection: 'row', gap: 14, flexWrap: 'wrap' }}>
-        <Legend color={c.brand} label="Done" filled />
-        <Legend color={c.brand} label="Planned" />
+        <Legend color={c.brandText} label="Done" filled />
+        <Legend color={c.brandText} label="Planned" />
         <Legend color={c.warn} label="Diary note" filled />
       </View>
     </Card>
@@ -292,16 +292,16 @@ function EasyToday() {
       onPress={() => router.navigate(`/workout/${t.id}`)}
       style={({ pressed }) => ({ backgroundColor: c.brand, borderRadius: radius.lg, padding: 22, flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 130, opacity: pressed ? 0.9 : 1 })}
     >
-      <View style={{ width: 60, height: 60, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="play" size={32} color="#fff" />
+      <View style={{ width: 60, height: 60, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.35)', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name="play" size={32} color={c.brandInk} />
       </View>
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ fontFamily: fonts.display, color: '#fff', fontSize: Math.round(24 * k) }}>{n ? 'Then this session' : "Start today's session"}</Text>
-        <Text style={{ fontFamily: fonts.medium, color: '#fff', fontSize: Math.round(16 * k), opacity: 0.92 }}>
+        <Text style={{ fontFamily: fonts.display, color: c.brandInk, fontSize: Math.round(24 * k) }}>{n ? 'Then this session' : "Start today's session"}</Text>
+        <Text style={{ fontFamily: fonts.medium, color: c.brandInk, fontSize: Math.round(16 * k), opacity: 0.92 }}>
           {t.name} · {t.minutes} minutes · You need {t.equipment.toLowerCase()}
         </Text>
       </View>
-      <Icon name="chev" size={28} color="#fff" />
+      <Icon name="chev" size={28} color={c.brandInk} />
     </Pressable>
   ))}</View> : null;
 

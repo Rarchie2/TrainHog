@@ -299,7 +299,7 @@ function Section({ n, title, children, optional }: { n: number; title: string; c
   return (
     <Card>
       <View style={{ flexDirection: 'row', gap: 10, alignItems: 'baseline' }}>
-        <Text style={{ fontFamily: fonts.heavy, color: c.brand, fontSize: 15 }}>{n}</Text>
+        <Text style={{ fontFamily: fonts.heavy, color: c.brandText, fontSize: 15 }}>{n}</Text>
         <H3>{title}</H3>
         {optional ? <Small>Optional</Small> : null}
       </View>

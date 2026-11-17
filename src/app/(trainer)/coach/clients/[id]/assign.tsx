@@ -29,8 +29,8 @@ export default function AssignToClient() {
   const input = { minHeight: 50, borderWidth: 1.5, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, fontFamily: fonts.body, fontSize: 16, color: c.ink, backgroundColor: c.surface } as const;
   const back = (
     <Pressable accessibilityRole="button" onPress={() => router.navigate(`/coach/clients/${who.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: TOUCH, alignSelf: 'flex-start' }}>
-      <Icon name="back" size={22} color={c.brand} />
-      <BodyBold color={c.brand}>{who.firstName}</BodyBold>
+      <Icon name="back" size={22} color={c.brandText} />
+      <BodyBold color={c.brandText}>{who.firstName}</BodyBold>
     </Pressable>
   );
 

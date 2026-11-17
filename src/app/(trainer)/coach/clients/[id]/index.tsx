@@ -173,8 +173,8 @@ export default function ClientDetail() {
   return (
     <Page>
       <Pressable accessibilityRole="button" onPress={() => router.navigate('/coach/clients')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: TOUCH, alignSelf: 'flex-start' }}>
-        <Icon name="back" size={22} color={c.brand} />
-        <BodyBold color={c.brand}>Clients</BodyBold>
+        <Icon name="back" size={22} color={c.brandText} />
+        <BodyBold color={c.brandText}>Clients</BodyBold>
       </Pressable>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <Avatar initials={who.initials} size={60} />

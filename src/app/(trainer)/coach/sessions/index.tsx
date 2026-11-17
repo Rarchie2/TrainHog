@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 import { Body, BodyBold, Button, Card, CATEGORY_ICON, Columns, H3, IconBadge, Page, Small, Tag, Thumb, Title, useLayout, useUI } from '@/components/ui';
 import { useStore } from '@/data/store';
+import { KIND_LABEL } from '@/data/structure';
 import type { Category, Session } from '@/data/types';
 
 export default function CoachSessions() {
@@ -17,11 +18,11 @@ export default function CoachSessions() {
         <View style={{ flex: 1, minWidth: 200 }}>
           <Title>Sessions</Title>
           <Small>
-            {st.sessions.length} ready-made sessions · {st.exercises.length} exercises in your library. Assign any of them as they are, or copy one and tweak it.
+            {st.sessions.length} ready-made sessions · {st.exercises.length} exercises in your library. Assign any of them as they are, or duplicate one to make next week's version.
           </Small>
         </View>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-          <Button small variant="ghost" icon="film" title="Film an exercise" />
+          <Button small variant="ghost" icon="list" title="Exercise library" onPress={() => router.navigate('/coach/sessions/exercises')} />
           <Button small icon="plus" title="Build a session" onPress={() => router.navigate('/coach/sessions/new')} />
         </View>
       </View>
@@ -38,13 +39,23 @@ export default function CoachSessions() {
                 <View style={{ flex: 1 }}>
                   <BodyBold>{s.name}</BodyBold>
                   <Small>
+                    {s.kind ? `${KIND_LABEL[s.kind]} · ` : ''}
                     {s.minutes} min · {s.exercises.length} exercises
                   </Small>
                   <Small>Assigned to {assignedCount(s.id)} · edited {s.updated.toLowerCase()}</Small>
                   {s.updated === 'Just now' ? <Tag label="New" tone="warn" /> : null}
                   <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
                     <Button small icon="plus" title="Assign" onPress={() => router.navigate(`/coach/sessions/assign?session=${s.id}`)} />
-                    <Button small variant="ghost" title="Copy and edit" onPress={() => router.navigate(`/coach/sessions/new?from=${s.id}`)} />
+                    <Button small variant="ghost" title="Edit" onPress={() => router.navigate(`/coach/sessions/new?edit=${s.id}`)} />
+                    <Button
+                      small
+                      variant="ghost"
+                      title="Duplicate"
+                      onPress={() => {
+                        const id = st.duplicateSession(s.id);
+                        if (id) router.navigate(`/coach/sessions/new?edit=${id}`);
+                      }}
+                    />
                   </View>
                 </View>
               </View>

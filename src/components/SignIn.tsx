@@ -5,7 +5,7 @@ import { APP_NAME } from '@/config';
 import { useStore } from '@/data/store';
 import { fonts, radius } from '@/theme';
 import { Icon } from './Icon';
-import { Body, BodyBold, Button, Card, Mark, Small, Title, useUI } from './ui';
+import { Body, BodyBold, Button, Card, Logo, Mark, Small, Title, useUI } from './ui';
 
 // No passwords: type your email, get a 6-digit code, type it in.
 export function SignIn() {
@@ -42,9 +42,8 @@ export function SignIn() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }}>
         <View style={{ width: '100%', maxWidth: 440, alignSelf: 'center', gap: 18 }}>
           <View style={{ alignItems: 'center', gap: 10 }}>
-            <Mark size={64} />
-            <Title center>{APP_NAME}</Title>
-            <Small>Training with Hogan</Small>
+            <Logo width={220} />
+            <Small>{APP_NAME} · Training with Hogan</Small>
           </View>
           <Card>
             {step === 'email' ? (
@@ -103,7 +102,7 @@ export function SignIn() {
             ) : null}
           </Card>
           <Pressable accessibilityRole="button" onPress={st.startDemo} style={{ alignSelf: 'center', minHeight: 48, justifyContent: 'center' }}>
-            <Text style={{ fontFamily: fonts.bold, color: c.brand, fontSize: 16 }}>Just looking? Try the demo</Text>
+            <Text style={{ fontFamily: fonts.bold, color: c.brandText, fontSize: 16 }}>Just looking? Try the demo</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -124,7 +123,7 @@ export function Loading() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, backgroundColor: c.bg }}>
       <Mark size={56} />
-      <ActivityIndicator color={c.brand} />
+      <ActivityIndicator color={c.brandText} />
     </View>
   );
 }

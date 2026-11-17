@@ -42,7 +42,7 @@ export default function Inbox() {
   const inPersonCard = inPersonToday.length ? (
     <Card>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Icon name="users" size={20} color={c.brand} />
+        <Icon name="users" size={20} color={c.brandText} />
         <BodyBold style={{ flex: 1 }}>In person today</BodyBold>
         <Small>Tap to see their last week</Small>
       </View>
@@ -57,14 +57,14 @@ export default function Inbox() {
               onPress={() => router.navigate(`/coach/clients/${who.id}/week`)}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 14, backgroundColor: c.brandSoft, flexGrow: 1, flexBasis: size === 'compact' ? undefined : 240, opacity: pressed ? 0.85 : 1 })}
             >
-              <Text style={{ fontFamily: fonts.displayHeavy, fontSize: 20, color: c.brand, fontVariant: ['tabular-nums'], minWidth: 58 }}>{x.time}</Text>
+              <Text style={{ fontFamily: fonts.displayHeavy, fontSize: 20, color: c.brandText, fontVariant: ['tabular-nums'], minWidth: 58 }}>{x.time}</Text>
               <View style={{ flex: 1 }}>
                 <BodyBold>
                   {who.firstName} {who.lastName}
                 </BodyBold>
                 <Small>{x.place}</Small>
               </View>
-              <Icon name="chev" size={20} color={c.brand} />
+              <Icon name="chev" size={20} color={c.brandText} />
             </Pressable>
           );
         })}

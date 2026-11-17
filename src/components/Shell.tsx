@@ -46,10 +46,10 @@ export function Shell({ items, children, subtitle, footer }: {
                 style={{ flex: 1, minHeight: 56 * k, alignItems: 'center', justifyContent: 'center', gap: 3 }}
               >
                 <View>
-                  <Icon name={it.icon} size={Math.round(24 * k)} color={on ? c.brand : c.muted} />
+                  <Icon name={it.icon} size={Math.round(24 * k)} color={on ? c.brandText : c.muted} />
                   {it.badge ? <Badge n={it.badge} /> : null}
                 </View>
-                <Text style={{ fontFamily: fonts.bold, fontSize: Math.round(12.5 * k), color: on ? c.brand : c.muted }} numberOfLines={1}>
+                <Text style={{ fontFamily: fonts.bold, fontSize: Math.round(12.5 * k), color: on ? c.brandText : c.muted }} numberOfLines={1}>
                   {it.label}
                 </Text>
               </Pressable>
@@ -105,10 +105,10 @@ export function Shell({ items, children, subtitle, footer }: {
               })}
             >
               <View>
-                <Icon name={it.icon} size={24} color={on ? c.brand : c.muted} />
+                <Icon name={it.icon} size={24} color={on ? c.brandText : c.muted} />
                 {!wide && it.badge ? <Badge n={it.badge} /> : null}
               </View>
-              <Text style={{ fontFamily: fonts.bold, fontSize: wide ? 16 : 12.5, color: on ? c.brand : c.ink, textAlign: 'center' }}>{it.label}</Text>
+              <Text style={{ fontFamily: fonts.bold, fontSize: wide ? 16 : 12.5, color: on ? c.brandText : c.ink, textAlign: 'center' }}>{it.label}</Text>
               {wide && it.badge ? (
                 <View style={{ marginLeft: 'auto', backgroundColor: c.bad, borderRadius: 11, minWidth: 22, height: 22, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ color: '#fff', fontFamily: fonts.heavy, fontSize: 12 }}>{it.badge}</Text>

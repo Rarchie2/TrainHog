@@ -52,6 +52,14 @@ type Saved = Pick<State, 'weeklyDoneOn' | 'weeklyPromptSeen'>;
 
 const newId = () => uuid();
 
+// "Upper body" -> "Upper body (2)", "Upper body (2)" -> "Upper body (3)".
+function nextName(name: string, taken: string[]) {
+  const base = name.replace(/\s*\((?:copy|\d+)\)$/i, '');
+  let n = Number(name.match(/\((\d+)\)$/)?.[1] ?? 1) + 1;
+  while (taken.includes(`${base} (${n})`)) n++;
+  return `${base} (${n})`;
+}
+
 function demoData(): LoadedData {
   return {
     clients: seed.clients,
@@ -108,6 +116,10 @@ type Actions = {
   sendMessage: (clientId: ID, text: string) => void;
   toggleFavourite: (assignmentId: ID) => void;
   saveSession: (session: Omit<Session, 'id' | 'businessId' | 'updated'>, assignTo: ID[], days?: string[]) => ID;
+  updateSession: (id: ID, patch: Partial<Omit<Session, 'id' | 'businessId'>>) => void;
+  duplicateSession: (id: ID) => ID | undefined;
+  addExercise: (e: Omit<Exercise, 'id' | 'businessId' | 'videoLength' | 'steps' | 'tags'> & Partial<Pick<Exercise, 'steps' | 'tags'>>) => Exercise;
+  updateExercise: (id: ID, patch: Partial<Omit<Exercise, 'id' | 'businessId'>>) => void;
   assign: (clientId: ID, sessionId: ID, days?: string[]) => void;
   setDays: (assignmentId: ID, days: string[]) => void;
   unassign: (assignmentId: ID) => void;
@@ -382,6 +394,47 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     [remote],
   );
+  const updateSession = useCallback(
+    (id: ID, patch: Partial<Omit<Session, 'id' | 'businessId'>>) => {
+      const old = ref.current.sessions.find((x) => x.id === id);
+      if (!old) return;
+      const next: Session = { ...old, ...patch, updated: 'Just now' };
+      set((s) => ({ ...s, sessions: s.sessions.map((x) => (x.id === id ? next : x)) }));
+      remote(() => save.session(biz(), next));
+    },
+    [remote],
+  );
+  // A copy to tweak, e.g. week 2 of a block. Clients aren't copied across.
+  const duplicateSession = useCallback(
+    (id: ID) => {
+      const old = ref.current.sessions.find((x) => x.id === id);
+      if (!old) return undefined;
+      const copy: Session = { ...old, id: newId(), name: nextName(old.name, ref.current.sessions.map((x) => x.name)), exercises: old.exercises.map((x) => ({ ...x })), updated: 'Just now' };
+      set((s) => ({ ...s, sessions: [...s.sessions, copy] }));
+      remote(() => save.session(biz(), copy));
+      return copy.id;
+    },
+    [remote],
+  );
+  const addExercise = useCallback(
+    (input: Omit<Exercise, 'id' | 'businessId' | 'videoLength' | 'steps' | 'tags'> & Partial<Pick<Exercise, 'steps' | 'tags'>>) => {
+      const e: Exercise = { steps: [], tags: [], ...input, id: newId(), businessId: ref.current.account?.businessId ?? 'b1', videoLength: '' };
+      set((s) => ({ ...s, exercises: [...s.exercises, e] }));
+      remote(() => save.exercise(biz(), e));
+      return e;
+    },
+    [remote],
+  );
+  const updateExercise = useCallback(
+    (id: ID, patch: Partial<Omit<Exercise, 'id' | 'businessId'>>) => {
+      const old = ref.current.exercises.find((x) => x.id === id);
+      if (!old) return;
+      const next = { ...old, ...patch };
+      set((s) => ({ ...s, exercises: s.exercises.map((x) => (x.id === id ? next : x)) }));
+      remote(() => save.exercise(biz(), next));
+    },
+    [remote],
+  );
   // Assigning a session the client already has just updates its days.
   const assign = useCallback(
     (clientId: ID, sessionId: ID, days: string[] = []) => {
@@ -491,7 +544,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions: Actions = {
     setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage,
-    toggleFavourite, saveSession, assign, setDays, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
+    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
     setCommunity, post, react, setPlan, reset, startDemo, sendCode, verifyCode, signOut, refresh, refreshAccount, clearSyncError,
   };
   // Every action above is stable (useCallback), so this only changes with the data.
