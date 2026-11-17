@@ -24,6 +24,7 @@ export default function CoachSessions() {
         </View>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
           <Button small variant="ghost" icon="list" title="Exercise library" onPress={() => router.navigate('/coach/sessions/exercises')} />
+          {size === 'wide' ? null : <Button small variant="ghost" icon="star" title="Branding" onPress={() => router.navigate('/coach/branding')} />}
           <Button small icon="plus" title="Build a session" onPress={() => router.navigate('/coach/sessions/new')} />
         </View>
       </View>

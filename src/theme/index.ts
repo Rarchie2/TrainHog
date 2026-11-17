@@ -1,23 +1,24 @@
-// Design tokens in JMH Fitness colours: Jamie's blue (#009FE3) and black
-// (#1D1D1B), on a mix of white and light blue backgrounds.
-//   brand     the blue for buttons, bars and badges (black text on top)
-//   brandText a deeper shade of the same blue for text and icons on white,
-//             because #009FE3 is too light to read as text
+// Design tokens. TrainHog's own white and blue look (concept A, "Clean cards")
+// is the default. A trainer business can set its own brand colour and text
+// colour (see src/theme/brand.ts), e.g. JMH Fitness.
+//   brand     the colour for buttons, bars and badges
+//   brandInk  text and icons on top of `brand`
+//   brandText the brand colour for text and icons on white (darker if needed to read)
 
 export const colors = {
-  bg: '#F2F8FC',
+  bg: '#F5F7FB',
   surface: '#FFFFFF',
-  surface2: '#E8F2F8',
-  ink: '#1D1D1B',
-  muted: '#575B61',
-  line: '#D9E4EB',
-  brand: '#009FE3',
-  brandInk: '#1D1D1B',
-  brandText: '#0076A8',
-  brandSoft: '#E0F3FC',
+  surface2: '#EDF1F8',
+  ink: '#0F1A2E',
+  muted: '#55617A',
+  line: '#DCE2EC',
+  brand: '#1E5BD8',
+  brandInk: '#FFFFFF',
+  brandText: '#1E5BD8',
+  brandSoft: '#E3ECFD',
   warn: '#9A5B00',
   warnSoft: '#FCF0DC',
-  // Red is reserved for pain and safety. Never use it for anything else.
+  // Red is reserved for pain, safety and missed sessions.
   bad: '#C0282D',
   badSoft: '#FCE5E5',
   ok: '#1F7A4D',
@@ -28,12 +29,11 @@ export const colors = {
 export const easyColors = {
   ...colors,
   bg: '#FFFFFF',
-  ink: '#111111',
-  muted: '#33373C',
-  line: '#8A98A3',
-  brand: '#0076A8',
-  brandInk: '#FFFFFF',
-  brandText: '#00618C',
+  ink: '#07101F',
+  muted: '#2E3A50',
+  line: '#8C99B0',
+  brand: '#1748B0',
+  brandText: '#1748B0',
 } as const;
 
 export type Palette = { [K in keyof typeof colors]: string };

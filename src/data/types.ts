@@ -9,6 +9,9 @@ export type Business = {
   trainerName: string;
   town: string;
   brandColor: string;
+  // The business's own look inside the app. Empty means TrainHog's default.
+  theme?: { brand?: string; ink?: string };
+  logo?: string; // a built-in logo key ('jmh') or an image link
 };
 
 export type Category =
@@ -66,6 +69,7 @@ export type Exercise = {
   name: string;
   category?: ExerciseCategory;
   videoUrl?: string; // e.g. an unlisted YouTube or Vimeo link
+  videoCredit?: string; // who filmed it, shown on the video, e.g. "JMH Fitness"
   videoLength: string; // e.g. "0:18"
   coachingNotes: string;
   steps: string[];

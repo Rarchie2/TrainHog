@@ -11,10 +11,11 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useMe, useStore } from '@/data/store';
 import type { Category, Feel } from '@/data/types';
-import { BREAKPOINTS, colors, easyColors, fonts, radius, TOUCH, type Palette } from '@/theme';
+import { BREAKPOINTS, fonts, radius, TOUCH, type Palette } from '@/theme';
+import { type Branding, paletteFor } from '@/theme/brand';
 import { Icon, type IconName } from './Icon';
 
 export type LayoutSize = 'compact' | 'medium' | 'wide';
@@ -27,10 +28,21 @@ export function useLayout(): { size: LayoutSize; width: number; height: number }
 
 // Colours and text scale. Easy view only applies on the client side.
 export function useUI(): { c: Palette; k: number; easy: boolean } {
-  const { role } = useStore();
+  const { role, business } = useStore();
   const me = useMe();
   const easy = role === 'client' && me.easyView;
-  return { c: easy ? easyColors : colors, k: easy ? 1.25 : role === 'trainer' ? 0.95 : 1, easy };
+  return { c: cachedPalette(business?.theme, easy), k: easy ? 1.25 : role === 'trainer' ? 0.95 : 1, easy };
+}
+
+const paletteCache = new Map<string, Palette>();
+function cachedPalette(theme: Branding | undefined, easy: boolean) {
+  const key = `${theme?.brand ?? ''}|${theme?.ink ?? ''}|${easy}`;
+  let p = paletteCache.get(key);
+  if (!p) {
+    p = paletteFor(theme, easy);
+    paletteCache.set(key, p);
+  }
+  return p;
 }
 
 type TxtProps = {
@@ -206,25 +218,58 @@ export function Avatar({ initials, size = 40, brand }: { initials: string; size?
 }
 
 // The Snout barbell: a barbell whose plates are pig snouts.
-// Jamie's JMH Fitness mark, on a white tile so it reads on any background.
-const JMH_MARK = require('../../assets/jmh-mark.png');
-const JMH_LOGO = require('../../assets/jmh-logo.png');
+// Logos built into the app, by key. A business picks one in Branding.
+export const LOGOS: Record<string, { name: string; mark: number; full: number; ratio: number; fullRatio: number }> = {
+  jmh: { name: 'JMH Fitness', mark: require('../../assets/jmh-mark.png'), full: require('../../assets/jmh-logo.png'), ratio: 289 / 600, fullRatio: 378 / 900 },
+};
 
-export function Mark({ size = 36 }: { size?: number }) {
+// The app's mark: the trainer business's own logo when it has one, otherwise
+// the TrainHog snout barbell.
+export function Mark({ size = 36, logo }: { size?: number; logo?: string | null }) {
+  const { business } = useStore();
   const { c } = useUI();
+  const key = logo === undefined ? business?.logo : logo ?? undefined;
+  const own = key ? LOGOS[key] : undefined;
+  if (own) {
+    return (
+      <View
+        accessibilityLabel={own.name}
+        style={{ width: size, height: size, borderRadius: size * 0.23, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: c.line, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Image source={own.mark} style={{ width: size * 0.78, height: size * 0.78 * own.ratio }} resizeMode="contain" />
+      </View>
+    );
+  }
   return (
-    <View
-      accessibilityLabel="JMH Fitness"
-      style={{ width: size, height: size, borderRadius: size * 0.23, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: c.line, alignItems: 'center', justifyContent: 'center' }}
-    >
-      <Image source={JMH_MARK} style={{ width: size * 0.78, height: size * 0.78 * (289 / 600) }} resizeMode="contain" />
-    </View>
+    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel="TrainHog">
+      <Defs>
+        <LinearGradient id="markGrad" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#2A6AF0" />
+          <Stop offset="1" stopColor="#123E9C" />
+        </LinearGradient>
+      </Defs>
+      <Rect width={100} height={100} rx={23} fill="url(#markGrad)" />
+      <Rect x={26} y={46} width={48} height={8} rx={4} fill="#FFFFFF" />
+      <Circle cx={25} cy={50} r={15} fill="#FFFFFF" />
+      <Circle cx={75} cy={50} r={15} fill="#FFFFFF" />
+      {[20.5, 29.5, 70.5, 79.5].map((x) => (
+        <Ellipse key={x} cx={x} cy={50} rx={2.8} ry={5.5} fill="#1E5BD8" />
+      ))}
+    </Svg>
   );
 }
 
-// The full JMH Fitness logo (mark and wordmark), for the sign-in screen.
-export function Logo({ width = 220 }: { width?: number }) {
-  return <Image source={JMH_LOGO} accessibilityLabel="JMH Fitness" style={{ width, height: width * (378 / 900) }} resizeMode="contain" />;
+// "Video by JMH Fitness": credit for the trainer who filmed an exercise.
+export function VideoCredit({ credit }: { credit?: string }) {
+  const { c } = useUI();
+  if (!credit) return null;
+  const logo = Object.entries(LOGOS).find(([, l]) => l.name.toLowerCase() === credit.toLowerCase())?.[0];
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 10, paddingVertical: 4, paddingHorizontal: 8 }} accessibilityLabel={`Video by ${credit}`}>
+      {logo ? <Mark size={24} logo={logo} /> : <Icon name="film" size={16} color={c.muted} />}
+      <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: c.ink }}>Video by {credit}</Text>
+    </View>
+  );
 }
 
 export const FEEL_LABELS = ['', 'Really hard', 'Hard', 'About right', 'Fairly easy', 'Really easy'] as const;

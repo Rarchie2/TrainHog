@@ -4,6 +4,7 @@ import { supabase } from './backend';
 import { agoLabel } from './format';
 import { isoDate, relativeLabel } from './sample';
 import type {
+  Business,
   Assignment,
   BodyweightEntry,
   CheckIn,
@@ -29,6 +30,7 @@ import type {
 export type Account = { userId: ID; email: string; trainer: boolean; clientId?: ID; businessId?: ID };
 
 export type LoadedData = {
+  business: Business | null;
   clients: Client[];
   exercises: Exercise[];
   sessions: Session[];
@@ -87,7 +89,7 @@ async function all(table: string, order?: string): Promise<Row[]> {
 
 // Everything this person may see (the database's rules do the filtering).
 export async function loadAll(account: Account): Promise<LoadedData> {
-  const [clients, priv, members, exercises, sessions, assignments, logs, pain, diary, replies, messages, bodyweights, lifts, weekly, posts, reactions, inPerson, planned] =
+  const [clients, priv, members, exercises, sessions, assignments, logs, pain, diary, replies, messages, bodyweights, lifts, weekly, posts, reactions, inPerson, planned, businesses] =
     await Promise.all([
       all('clients'),
       account.trainer ? all('client_private') : Promise.resolve([]),
@@ -107,6 +109,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       all('post_reactions'),
       all('in_person'),
       all('planned_sessions'),
+      all('businesses'),
     ]);
 
   const lastLog = new Map<string, string>();
@@ -155,7 +158,11 @@ export async function loadAll(account: Account): Promise<LoadedData> {
     reactionMap.set(r.post_id, m);
   });
 
+  const b = businesses.find((x) => x.id === account.businessId) ?? businesses[0];
   return {
+    business: b
+      ? { id: b.id, name: b.name, trainerName: b.trainer_name, town: b.town ?? '', brandColor: b.brand_color ?? '', theme: b.theme ?? undefined, logo: b.logo ?? undefined }
+      : null,
     clients: mapped,
     exercises: exercises.map((e) => ({
       id: e.id,
@@ -163,6 +170,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       name: e.name,
       category: e.category ?? undefined,
       videoUrl: e.video_url ?? undefined,
+      videoCredit: e.video_credit ?? undefined,
       videoLength: e.video_length,
       coachingNotes: e.coaching_notes,
       steps: e.steps ?? [],
@@ -279,6 +287,7 @@ export const save = {
     ok(db().from('assignments').upsert({ id: a.id, business_id: b, client_id: a.clientId, session_id: a.sessionId, days: a.days, favourite: !!a.favourite, is_new: !!a.isNew, plan: a.plan ?? null }), 'the assignment'),
   plan: (b: ID, rows: PlannedSession[]) =>
     ok(db().from('planned_sessions').insert(rows.map((x) => ({ id: x.id, business_id: b, client_id: x.clientId, session_id: x.sessionId, date: x.date, position: x.position }))), 'the calendar'),
+  branding: (b: ID, theme: Business['theme'] | null, logo: string | null) => ok(db().from('businesses').update({ theme, logo }).eq('id', b), 'the branding'),
   unplan: (id: ID) => ok(db().from('planned_sessions').delete().eq('id', id), 'the calendar'),
   unassign: (id: ID) => ok(db().from('assignments').delete().eq('id', id), 'the change'),
   session: (b: ID, s: Session) =>
@@ -288,7 +297,7 @@ export const save = {
     ),
   exercise: (b: ID, e: Exercise) =>
     ok(
-      db().from('exercises').upsert({ id: e.id, business_id: b, name: e.name, category: e.category ?? null, video_url: e.videoUrl ?? null, video_length: e.videoLength, coaching_notes: e.coachingNotes, steps: e.steps, easier: e.easier ?? null, harder: e.harder ?? null, tags: e.tags }),
+      db().from('exercises').upsert({ id: e.id, business_id: b, name: e.name, category: e.category ?? null, video_url: e.videoUrl ?? null, video_credit: e.videoCredit ?? null, video_length: e.videoLength, coaching_notes: e.coachingNotes, steps: e.steps, easier: e.easier ?? null, harder: e.harder ?? null, tags: e.tags }),
       'the exercise',
     ),
   client: async (b: ID, c: Client, email?: string) => {

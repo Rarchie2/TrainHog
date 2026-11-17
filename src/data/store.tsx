@@ -12,6 +12,7 @@ import { type Account, claimAccount, type LoadedData, loadAll, save } from './re
 import * as seed from './sample';
 import type {
   Assignment,
+  Business,
   CheckIn,
   Client,
   CommunityPost,
@@ -63,6 +64,7 @@ function nextName(name: string, taken: string[]) {
 
 function demoData(): LoadedData {
   return {
+    business: seed.business,
     clients: seed.clients,
     exercises: seed.exercises,
     sessions: seed.sessions,
@@ -80,7 +82,7 @@ function demoData(): LoadedData {
     planned: seed.planned,
   };
 }
-const EMPTY: LoadedData = { clients: [], exercises: [], sessions: [], assignments: [], logs: [], pain: [], diary: [], replies: [], messages: [], bodyweights: [], lifts: [], weekly: [], posts: [], inPerson: [], planned: [] };
+const EMPTY: LoadedData = { business: null, clients: [], exercises: [], sessions: [], assignments: [], logs: [], pain: [], diary: [], replies: [], messages: [], bodyweights: [], lifts: [], weekly: [], posts: [], inPerson: [], planned: [] };
 
 function initialState(): State {
   return {
@@ -127,6 +129,7 @@ type Actions = {
   planSession: (clientId: ID, sessionId: ID, date: string) => void;
   unplan: (id: ID) => void;
   copyWeek: (clientId: ID, fromMonday: string, weeks: number) => number; // how many sessions were added
+  setBranding: (theme: Business['theme'] | undefined, logo: string | undefined) => void;
   unassign: (assignmentId: ID) => void;
   addClient: (firstName: string, lastName: string, contact: string, easyView: boolean) => void;
   reset: () => void;
@@ -451,6 +454,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     [updateAssignment, remote],
   );
+  // The business's own colours and logo. Empty means TrainHog's look.
+  const setBranding = useCallback(
+    (theme: Business['theme'] | undefined, logo: string | undefined) => {
+      set((s) => ({ ...s, business: s.business ? { ...s.business, theme, logo } : s.business }));
+      remote(() => save.branding(biz(), theme ?? null, logo ?? null));
+    },
+    [remote],
+  );
   // Calendar: put a session on a date, take it off, or copy a week forward.
   const planSession = useCallback(
     (clientId: ID, sessionId: ID, date: string) => {
@@ -592,7 +603,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions: Actions = {
     setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage,
-    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
+    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, setBranding, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
     setCommunity, post, react, setPlan, reset, startDemo, sendCode, verifyCode, signOut, refresh, refreshAccount, clearSyncError,
   };
   // Every action above is stable (useCallback), so this only changes with the data.

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, Text, TextInput, Vibration, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
-import { Body, BodyBold, Button, Card, Chip, Eyebrow, H3, Small, Tag, Thumb, Title, useLayout, useUI } from '@/components/ui';
+import { Body, BodyBold, Button, Card, Chip, Eyebrow, H3, Small, Tag, Thumb, Title, useLayout, useUI, VideoCredit } from '@/components/ui';
 import { CHANGE_LABELS, holdSeconds, prescription } from '@/data/format';
 import { useLookups, useStore } from '@/data/store';
 import { effortLabel, groupLabel, groups, restAfter, sectionLabel, sectionOf } from '@/data/structure';
@@ -310,6 +310,7 @@ export default function Workout() {
   const video = (
     <View style={{ gap: 10 }}>
       <Thumb label={e.name} duration={e.videoLength} />
+      <VideoCredit credit={e.videoCredit} />
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         <Button small variant="ghost" icon="film" title={e.videoUrl ? 'Watch the video' : 'Video coming soon'} disabled={!e.videoUrl} onPress={() => e.videoUrl && Linking.openURL(e.videoUrl)} />
         <Button small variant="ghost" icon="speaker" title="Read aloud" />

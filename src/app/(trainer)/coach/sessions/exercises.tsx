@@ -86,7 +86,7 @@ export default function ExerciseLibrary() {
                 <BodyBold>{e.name}</BodyBold>
                 <Small>{e.category ?? 'No category yet'}</Small>
               </View>
-              {e.videoUrl ? <Tag label="Video" icon="film" tone="ok" /> : <Tag label="No video" tone="neutral" />}
+              {e.videoUrl ? <Tag label={e.videoCredit ? `Video · ${e.videoCredit}` : 'Video'} icon="film" tone="ok" /> : <Tag label="No video" tone="neutral" />}
               <Icon name="chev" size={20} color={c.muted} />
             </Pressable>
           ),
@@ -96,7 +96,7 @@ export default function ExerciseLibrary() {
   );
 }
 
-type Draft = Pick<Exercise, 'name' | 'category' | 'videoUrl' | 'coachingNotes'>;
+type Draft = Pick<Exercise, 'name' | 'category' | 'videoUrl' | 'videoCredit' | 'coachingNotes'>;
 
 function ExerciseForm({ title, start, onSave, onCancel }: { title: string; start?: Exercise; onSave: (e: Draft) => void; onCancel: () => void }) {
   const { c } = useUI();
@@ -104,6 +104,9 @@ function ExerciseForm({ title, start, onSave, onCancel }: { title: string; start
   const [category, setCategory] = useState<ExerciseCategory | undefined>(start?.category);
   const [video, setVideo] = useState(start?.videoUrl ?? '');
   const [notes, setNotes] = useState(start?.coachingNotes ?? '');
+  const { business } = useStore();
+  // Credit whoever filmed it. Defaults to this business when it has its own branding.
+  const [credit, setCredit] = useState(start?.videoCredit ?? (business?.logo ? business.name : ''));
   const input = { minHeight: 50, borderWidth: 1.5, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, fontFamily: fonts.body, fontSize: 16, color: c.ink, backgroundColor: c.surface } as const;
   const url = cleanVideoUrl(video);
   return (
@@ -129,6 +132,12 @@ function ExerciseForm({ title, start, onSave, onCancel }: { title: string; start
         accessibilityLabel="Video link"
       />
       {url ? <Button small variant="ghost" icon="film" title="Check the link" onPress={() => Linking.openURL(url)} /> : null}
+      {url ? (
+        <>
+          <Small>Video credit, shown on the video in the app (optional)</Small>
+          <TextInput value={credit} onChangeText={setCredit} placeholder="For example: JMH Fitness" placeholderTextColor={c.muted} style={input} accessibilityLabel="Video credit" />
+        </>
+      ) : null}
       <Small>Coaching notes (optional). Clients see these during the session.</Small>
       <TextInput
         value={notes}
@@ -140,7 +149,7 @@ function ExerciseForm({ title, start, onSave, onCancel }: { title: string; start
         accessibilityLabel="Coaching notes"
       />
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-        <Button small icon="check" title="Save" disabled={!name.trim()} onPress={() => onSave({ name: name.trim(), category, videoUrl: url, coachingNotes: notes.trim() })} />
+        <Button small icon="check" title="Save" disabled={!name.trim()} onPress={() => onSave({ name: name.trim(), category, videoUrl: url, videoCredit: url ? credit.trim() || undefined : undefined, coachingNotes: notes.trim() })} />
         <Button small variant="ghost" title="Cancel" onPress={onCancel} />
       </View>
     </Card>

@@ -48,7 +48,7 @@ export const business: Business = {
   name: 'TrainHog',
   trainerName: 'Hogan',
   town: 'Winchester',
-  brandColor: '#009FE3',
+  brandColor: '#1E5BD8',
 };
 
 const ex = (
@@ -121,6 +121,8 @@ const CATEGORY_BY_NAME: Record<string, ExerciseCategory> = {
 exercises.forEach((e) => {
   e.category = CATEGORY_BY_NAME[e.name];
 });
+// Jamie's videos are shared with every trainer and credited to him.
+for (const e of exercises.filter((x) => ['e1', 'e2', 'e4'].includes(x.id))) e.videoCredit = 'JMH Fitness';
 
 const s = (
   id: string,
