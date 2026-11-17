@@ -111,6 +111,15 @@ src/
 - Opt-in community feed with emoji posts and reactions. No free text.
 - "In person today" on Hogan's inbox. Tapping a client opens their last 7 days.
 
+## Added after Jamie's first round of testing (November)
+
+- The weekly check-in pop-up only shows when a check-in is actually due (none sent since Sunday), and only once per week. The card stays on Today until it's done. The last check-in date is saved on the phone so it survives closing the app.
+- More than one session on a day (for example a mobility warm-up, then weights). Today shows "Today's plan" with each session in order.
+- Seconds as well as reps: each exercise can count in reps or seconds (holds). Timed holds get a countdown in the workout.
+- Clients can do exercises in any order: "Change order" to pick the next one, or "Kit taken? Do it later".
+- Clearer assigning: "Assign a session" on the client page (pick a ready-made session, pick days, then set numbers), "Assign" and "Copy and edit" on every session in the library, and "Start from a ready-made session" in the builder.
+- Clients see their own bodyweight and strength graphs on Today.
+
 ## Next build steps
 
 1. Backend: Supabase (London region) with row-level security per trainer business, as in the spec. Replace `src/data/store.tsx` with real queries.

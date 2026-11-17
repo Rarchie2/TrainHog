@@ -1,6 +1,7 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { CATEGORIES, DayPicker } from '@/components/Assign';
 import { Icon } from '@/components/Icon';
 import { NumbersEditor } from '@/components/NumbersEditor';
 import { Body, BodyBold, Button, Card, Chip, H3, Page, Small, Tag, Thumb, Title, useLayout, useUI } from '@/components/ui';
@@ -8,17 +9,19 @@ import { useStore } from '@/data/store';
 import type { Category, SessionExercise } from '@/data/types';
 import { fonts, radius, TOUCH } from '@/theme';
 
-const CATEGORIES: Category[] = ['Strength', 'Mobility', 'Cardio', 'Rehab', 'Warm-ups', 'Home workouts', 'Balance'];
-
 // Hogan picks exercises from his library, sets the numbers and assigns it.
 export default function NewSession() {
+  const { from, client } = useLocalSearchParams<{ from?: string; client?: string }>();
   const st = useStore();
   const { c } = useUI();
   const { size } = useLayout();
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState<Category>('Strength');
-  const [items, setItems] = useState<SessionExercise[]>([]);
-  const [assignTo, setAssignTo] = useState<string[]>([]);
+  // "Copy and edit" starts from a ready-made session.
+  const source = st.sessions.find((x) => x.id === from);
+  const [name, setName] = useState(source ? `${source.name} (copy)` : '');
+  const [category, setCategory] = useState<Category>(source?.category ?? 'Strength');
+  const [items, setItems] = useState<SessionExercise[]>(() => source?.exercises.map((x) => ({ ...x })) ?? []);
+  const [assignTo, setAssignTo] = useState<string[]>(client ? [client] : []);
+  const [days, setDays] = useState<string[]>([]);
   const [q, setQ] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
 
@@ -49,6 +52,7 @@ export default function NewSession() {
                 setName('');
                 setItems([]);
                 setAssignTo([]);
+                setDays([]);
               }}
             />
           </View>
@@ -90,8 +94,27 @@ export default function NewSession() {
           );
         })}
       </Card>
+      {items.length === 0 ? (
+        <Card tone="soft">
+          <H3>Start from a ready-made session</H3>
+          <Small>Copies its exercises and numbers in, then change whatever you like.</Small>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {st.sessions.map((x) => (
+              <Chip
+                key={x.id}
+                label={x.name}
+                onPress={() => {
+                  setItems(x.exercises.map((y) => ({ ...y })));
+                  setCategory(x.category);
+                  if (!name.trim()) setName(`${x.name} (copy)`);
+                }}
+              />
+            ))}
+          </View>
+        </Card>
+      ) : null}
       <Card>
-        <H3>Assign to</H3>
+        <H3>Assign to (optional)</H3>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {st.clients
             .filter((x) => x.invite === 'joined')
@@ -99,6 +122,12 @@ export default function NewSession() {
               <Chip key={x.id} label={`${x.firstName} ${x.lastName[0]}.`} on={assignTo.includes(x.id)} onPress={() => setAssignTo(assignTo.includes(x.id) ? assignTo.filter((y) => y !== x.id) : [...assignTo, x.id])} />
             ))}
         </View>
+        {assignTo.length ? (
+          <>
+            <Small>On which days?</Small>
+            <DayPicker days={days} onChange={setDays} />
+          </>
+        ) : null}
       </Card>
       <Button
         full
@@ -106,7 +135,7 @@ export default function NewSession() {
         title={name.trim() && items.length ? 'Save session' : 'Add a name and at least one exercise'}
         disabled={!name.trim() || items.length === 0}
         onPress={() => {
-          st.saveSession({ name: name.trim(), category, minutes, equipment: 'See exercises', level: 1, purpose: `${category} session from Hogan.`, exercises: items }, assignTo);
+          st.saveSession({ name: name.trim(), category, minutes, equipment: 'See exercises', level: 1, purpose: `${category} session from Hogan.`, exercises: items }, assignTo, days);
           setSaved(name.trim());
         }}
       />

@@ -62,7 +62,7 @@ export function PlanLine({ points, weeks, unit, height = 150 }: { points: Point[
 
 // Headline above a chart: latest value and the change since week 1, with
 // the change judged against the client's goal.
-export function ChangeLine({ first, last, unit, good }: { first: number; last: number; unit: string; good: 'up' | 'down' | 'flat' }) {
+export function ChangeLine({ first, last, unit, good, audience = 'coach' }: { first: number; last: number; unit: string; good: 'up' | 'down' | 'flat'; audience?: 'coach' | 'client' }) {
   const { c } = useUI();
   const diff = Math.round((last - first) * 10) / 10;
   const pct = first ? Math.round((diff / first) * 100) : 0;
@@ -74,10 +74,10 @@ export function ChangeLine({ first, last, unit, good }: { first: number; last: n
         {last}
         <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: c.muted }}> {unit}</Text>
       </Text>
-      <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: onTrack ? c.ok : c.warn }}>
+      <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: onTrack ? c.ok : audience === 'client' ? c.muted : c.warn }}>
         {sign}
         {Math.abs(diff)} {unit}
-        {pct ? ` (${sign}${Math.abs(pct)}%)` : ''} {onTrack ? '· on track' : '· check in'}
+        {pct ? ` (${sign}${Math.abs(pct)}%)` : ''} {onTrack ? '· on track' : audience === 'client' ? '' : '· check in'}
       </Text>
       <Small>since week 1</Small>
     </View>
