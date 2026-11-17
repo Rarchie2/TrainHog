@@ -9,9 +9,11 @@ import type {
   CommunityPost,
   DiaryEntry,
   InPersonSession,
+  PlannedSession,
   LiftEntry,
   WeeklyCheckIn,
   Exercise,
+  ExerciseCategory,
   Message,
   PainReport,
   Reply,
@@ -88,6 +90,40 @@ export const exercises: Exercise[] = [
   ex('e23', 'Seated march', '0:12', 'Sit tall and lift one knee at a time. Swing your arms if you can.', ['Sit near the front of the chair.', 'Lift one knee.', 'Lower and lift the other.'], ['warm-up', 'senior'], undefined, 'Standing march'),
 ];
 
+// Hogan's library categories for the starter exercises.
+const CATEGORY_BY_NAME: Record<string, ExerciseCategory> = {
+  'Goblet squat': 'Quads',
+  'Romanian deadlift': 'Hamstrings',
+  'Walking lunge': 'Quads',
+  'Glute bridge': 'Glutes',
+  'Calf raise': 'Calves',
+  'Dead bug': 'Core',
+  'Step-up': 'Quads',
+  'Incline push-up': 'Chest',
+  'Dumbbell row': 'Back',
+  'Shoulder press': 'Shoulders',
+  'Cat cow': 'Dynamic stretches',
+  'Thread the needle': 'Dynamic stretches',
+  'Hip flexor stretch': 'Static stretches',
+  'Sit to stand': 'Quads',
+  'Heel to toe walk': 'Drills',
+  'Single-leg balance': 'Drills',
+  'Seated knee extension': 'Quads',
+  'Banded clam': 'Glutes',
+  'Jumping jacks': 'Cardiovascular',
+  'Squat thrust': 'Cardiovascular',
+  'Mountain climber': 'Cardiovascular',
+  'Arm circles': 'Dynamic stretches',
+  'Plank': 'Core',
+  'Wall sit': 'Quads',
+  'Seated march': 'Cardiovascular',
+};
+exercises.forEach((e) => {
+  e.category = CATEGORY_BY_NAME[e.name];
+});
+// Jamie's videos are shared with every trainer and credited to him.
+for (const e of exercises.filter((x) => ['e1', 'e2', 'e4'].includes(x.id))) e.videoCredit = 'JMH Fitness';
+
 const s = (
   id: string,
   name: string,
@@ -99,18 +135,23 @@ const s = (
   exercises: Session['exercises'],
   updated: string,
   safetyNote?: string,
-): Session => ({ id, businessId: 'b1', name, category, minutes, equipment, level, purpose, exercises, updated, safetyNote });
+  kind?: Session['kind'],
+): Session => ({ id, businessId: 'b1', name, category, minutes, equipment, level, purpose, exercises, updated, safetyNote, kind });
 
 export const sessions: Session[] = [
-  s('s1', 'Lower body strength A', 'Strength', 40, 'Dumbbells', 2, 'Builds leg and hip strength for running and everyday life.', [
-    { exerciseId: 'e1', sets: 3, reps: '10', weight: '16 kg', restSec: 60, ifStruggling: 'Drop to 12 kg and keep the reps. If your knee grumbles, squat to a bench instead.' },
-    { exerciseId: 'e2', sets: 3, reps: '10', weight: '2 x 10 kg', restSec: 60, ifStruggling: 'Use 2 x 8 kg and only lower to your knees. Back flat is more important than the weight.' },
+  s('s1', 'Lower body strength A', 'Strength', 45, 'Dumbbells', 2, 'Builds leg and hip strength for running and everyday life.', [
+    { exerciseId: 'e19', section: 'cv-warmup', sets: 1, time: '3 min', restSec: 0, note: 'Or 5 minutes on the bike.' },
+    { exerciseId: 'e11', section: 'mobility', sets: 1, reps: '8', restSec: 0 },
+    { exerciseId: 'e22', section: 'mobility', sets: 1, time: '30 sec', restSec: 0 },
+    { exerciseId: 'e13', section: 'specific-mobility', sets: 1, time: '30 sec each side', restSec: 0 },
+    { exerciseId: 'e1', sets: 3, reps: '10', weight: '16 kg', tempo: '3-1-1-0', effort: 7, effortScale: 'RPE', restSec: 90, ifStruggling: 'Drop to 12 kg and keep the reps. If your knee grumbles, squat to a bench instead.' },
+    { exerciseId: 'e2', sets: 3, reps: '10', weight: '2 x 10 kg', effort: 2, effortScale: 'RIR', join: 'superset', restSec: 0, ifStruggling: 'Use 2 x 8 kg and only lower to your knees. Back flat is more important than the weight.' },
+    { exerciseId: 'e4', sets: 3, reps: '12', effort: 7, restSec: 60 },
     { exerciseId: 'e3', sets: 3, reps: '8 each side', restSec: 60, note: 'Swap for step-ups if the knee is sore.', ifStruggling: 'Swap to step-ups on a low step, 8 each leg.' },
-    { exerciseId: 'e4', sets: 3, reps: '12', restSec: 45 },
-    { exerciseId: 'e5', sets: 3, reps: '15', restSec: 30 },
-    { exerciseId: 'e6', sets: 3, reps: '8 each side', restSec: 30 },
+    { exerciseId: 'e5', sets: 3, reps: '15', tempo: '1-1-3-0', dropSet: true, restSec: 45 },
     { exerciseId: 'e25', sets: 2, time: '40 sec', restSec: 45 },
-  ], '2 days ago', 'Stop if you feel sharp pain in the knee.'),
+    { exerciseId: 'e13', section: 'cooldown', sets: 1, time: '45 sec each side', restSec: 0 },
+  ], '2 days ago', 'Stop if you feel sharp pain in the knee.', 'weights'),
   s('s2', 'Upper body B', 'Strength', 35, 'Dumbbells, bench', 2, 'Pushing and pulling strength with good posture.', [
     { exerciseId: 'e8', sets: 3, reps: '10', restSec: 60 },
     { exerciseId: 'e9', sets: 3, reps: '10 each side', weight: '12 kg', restSec: 60, ifStruggling: 'Go down to 10 kg and pause for a second at the top.' },
@@ -132,10 +173,12 @@ export const sessions: Session[] = [
     { exerciseId: 'e22', sets: 1, time: '30 sec', restSec: 0 },
   ], '3 weeks ago'),
   s('s5', 'Hotel room intervals', 'Cardio', 20, 'No equipment', 3, 'A sweaty session you can do anywhere in 20 minutes.', [
-    { exerciseId: 'e19', sets: 4, time: '30 sec', restSec: 30 },
-    { exerciseId: 'e20', sets: 4, time: '30 sec', restSec: 30 },
-    { exerciseId: 'e21', sets: 4, time: '30 sec', restSec: 30 },
-  ], '1 month ago'),
+    { exerciseId: 'e22', section: 'mobility', sets: 1, time: '30 sec', restSec: 0 },
+    { exerciseId: 'e19', sets: 4, time: '30 sec', join: 'circuit', restSec: 0 },
+    { exerciseId: 'e20', sets: 4, time: '30 sec', join: 'circuit', restSec: 0 },
+    { exerciseId: 'e21', sets: 4, time: '30 sec', effort: 8, restSec: 60 },
+    { exerciseId: 'e13', section: 'cooldown', sets: 1, time: '30 sec each side', restSec: 0 },
+  ], '1 month ago', undefined, 'cv'),
   s('s6', 'Gym warm-up', 'Warm-ups', 10, 'No equipment', 1, 'Do this before any strength session.', [
     { exerciseId: 'e22', sets: 1, time: '30 sec', restSec: 0 },
     { exerciseId: 'e11', sets: 1, time: '30 sec', restSec: 0 },
@@ -168,6 +211,13 @@ export const sessions: Session[] = [
   ], 'Last week'),
 ];
 
+// A phased template for the demo: mobility phase 1 then phase 2.
+for (const [id, phase] of [['s4', 1], ['s8', 2]] as const) {
+  const x = sessions.find((y) => y.id === id)!;
+  x.programme = 'Mobility progression';
+  x.phase = phase;
+}
+
 const cl = (c: Omit<Client, 'businessId'>): Client => ({ ...c, businessId: 'b1' });
 
 export const clients: Client[] = [
@@ -182,7 +232,7 @@ export const clients: Client[] = [
   cl({ id: 'c9', firstName: 'Jo', lastName: 'Pearce', initials: 'JP', contact: 'jo@example.com', ageGroup: 'adult', goals: 'To be agreed.', conditions: 'Unknown.', trainerNotes: 'First session next week.', programme: 'No plan yet', easyView: false, invite: 'sent', lastActive: 'Not joined yet', daysSinceActive: 99 }),
 ];
 
-const as = (id: string, clientId: string, sessionId: string, days: string[], extra: Partial<Assignment> = {}): Assignment => ({ id, clientId, sessionId, days, ...extra });
+const as = (id: string, clientId: string, sessionId: string, days: string[], extra: Partial<Assignment> = {}): Assignment => ({ id, clientId, sessionId, days, createdOn: isoDate(new Date()), ...extra });
 
 export const assignments: Assignment[] = [
   as('a1', 'c1', 's1', ['Thu']),
@@ -311,4 +361,16 @@ export const inPerson: InPersonSession[] = [
   { id: 'ip2', clientId: 'c1', date: isoDate(daysAgo(0)), time: '12:00', place: 'The gym' },
   { id: 'ip3', clientId: 'c3', date: isoDate(daysAgo(0)), time: '17:30', place: 'The gym' },
   { id: 'ip4', clientId: 'c6', date: isoDate(daysAgo(-1)), time: '07:00', place: 'The gym' },
+];
+
+// Calendar sessions on specific dates. Sarah missed Upper body B three days
+// ago, so the demo shows the red marker and the note to Hogan.
+const pl = (id: string, clientId: string, sessionId: string, n: number, position = 0): PlannedSession => ({ id, clientId, sessionId, date: isoDate(daysAgo(n)), position });
+export const planned: PlannedSession[] = [
+  pl('p1', 'c1', 's2', 3),
+  pl('p2', 'c1', 's1', 2),
+  pl('p3', 'c1', 's3', -2),
+  pl('p4', 'c1', 's5', -4),
+  pl('p5', 'c3', 's1', 4),
+  pl('p6', 'c3', 's5', -1),
 ];

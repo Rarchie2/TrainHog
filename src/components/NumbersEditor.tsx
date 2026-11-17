@@ -4,7 +4,7 @@ import type { SessionExercise } from '@/data/types';
 import { fonts, radius } from '@/theme';
 import { Chip, Small, useUI } from './ui';
 
-export function Stepper({ label, value, onChange, step = 1, min = 0, suffix = '' }: { label: string; value: number; onChange: (n: number) => void; step?: number; min?: number; suffix?: string }) {
+export function Stepper({ label, value, onChange, step = 1, min = 0, suffix = '', display }: { label: string; value: number; onChange: (n: number) => void; step?: number; min?: number; suffix?: string; display?: string }) {
   const { c } = useUI();
   const btn = (txt: string, d: number) => (
     <Pressable accessibilityRole="button" accessibilityLabel={`${txt === '+' ? 'More' : 'Less'} ${label}`} onPress={() => onChange(Math.max(min, value + d))} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
@@ -17,8 +17,7 @@ export function Stepper({ label, value, onChange, step = 1, min = 0, suffix = ''
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         {btn('−', -step)}
         <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: c.ink, minWidth: 54, textAlign: 'center' }}>
-          {value}
-          {suffix}
+          {display ?? `${value}${suffix}`}
         </Text>
         {btn('+', step)}
       </View>
@@ -44,9 +43,11 @@ function Field({ label, value, onChange, placeholder, multiline }: { label: stri
   );
 }
 
-// Sets, reps, weight, rest and the "if they're struggling" tip for one exercise.
-// Used by the session builder and by the per-client numbers screen.
-export function NumbersEditor({ x, onChange, name }: { x: SessionExercise; onChange: (patch: Partial<SessionExercise>) => void; name: string }) {
+// Sets, reps, weight, tempo, effort, rest and the "if they're struggling" tip
+// for one exercise. Used by the session builder and the per-client numbers screen.
+// `restNote` replaces the rest control when rest doesn't apply (part-way
+// through a superset or circuit).
+export function NumbersEditor({ x, onChange, name, restNote }: { x: SessionExercise; onChange: (patch: Partial<SessionExercise>) => void; name: string; restNote?: string }) {
   const timed = x.time !== undefined;
   const numericReps = !timed && (x.reps === undefined || /^\d+$/.test(x.reps));
   const secs = timed ? holdSeconds(x) : undefined;
@@ -63,7 +64,15 @@ export function NumbersEditor({ x, onChange, name }: { x: SessionExercise; onCha
         <Stepper label="Sets" value={x.sets} min={1} onChange={(n) => onChange({ sets: n })} />
         {numericReps ? <Stepper label="Reps" value={Number(x.reps ?? 10)} min={1} onChange={(n) => onChange({ reps: String(n) })} /> : null}
         {timed && secs !== undefined ? <Stepper label="Hold" value={secs} min={5} step={5} suffix="s" onChange={(n) => onChange({ time: `${n} sec${timeExtra ? ` ${timeExtra}` : ''}` })} /> : null}
-        <Stepper label="Rest" value={x.restSec} step={15} suffix="s" onChange={(n) => onChange({ restSec: n })} />
+        {restNote ? null : <Stepper label="Rest" value={x.restSec} step={15} suffix="s" onChange={(n) => onChange({ restSec: n })} />}
+        <Stepper label={x.effortScale ?? 'RPE'} value={x.effort ?? 0} display={x.effort ? String(x.effort) : 'Off'} onChange={(n) => onChange({ effort: n ? Math.min(10, n) : undefined })} />
+      </View>
+      {restNote ? <Small>{restNote}</Small> : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <Small>Effort scale</Small>
+        <Chip label="RPE" on={(x.effortScale ?? 'RPE') === 'RPE'} onPress={() => onChange({ effortScale: 'RPE' })} />
+        <Chip label="RIR" on={x.effortScale === 'RIR'} onPress={() => onChange({ effortScale: 'RIR' })} />
+        <Chip label="Drop set" on={!!x.dropSet} onPress={() => onChange({ dropSet: x.dropSet ? undefined : true })} />
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
         {!numericReps ? (
@@ -74,6 +83,7 @@ export function NumbersEditor({ x, onChange, name }: { x: SessionExercise; onCha
           )
         ) : null}
         <Field label="Weight" value={x.weight ?? ''} onChange={(t) => onChange({ weight: t || undefined })} placeholder="For example: 2 x 10 kg (blank for bodyweight)" />
+        <Field label="Tempo (optional)" value={x.tempo ?? ''} onChange={(t) => onChange({ tempo: t || undefined })} placeholder="For example: 3-1-1-0 (3 seconds down)" />
       </View>
       <Field label="If they're struggling" value={x.ifStruggling ?? ''} onChange={(t) => onChange({ ifStruggling: t || undefined })} placeholder={`What to do if ${name.toLowerCase()} is too hard`} multiline />
       <Field label="Note for the client (optional)" value={x.note ?? ''} onChange={(t) => onChange({ note: t || undefined })} placeholder="For example: keep the knee over the toes" />

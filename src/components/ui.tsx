@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleProp,
@@ -13,7 +14,8 @@ import {
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useMe, useStore } from '@/data/store';
 import type { Category, Feel } from '@/data/types';
-import { BREAKPOINTS, colors, easyColors, fonts, radius, TOUCH, type Palette } from '@/theme';
+import { BREAKPOINTS, fonts, radius, TOUCH, type Palette } from '@/theme';
+import { type Branding, paletteFor } from '@/theme/brand';
 import { Icon, type IconName } from './Icon';
 
 export type LayoutSize = 'compact' | 'medium' | 'wide';
@@ -26,10 +28,21 @@ export function useLayout(): { size: LayoutSize; width: number; height: number }
 
 // Colours and text scale. Easy view only applies on the client side.
 export function useUI(): { c: Palette; k: number; easy: boolean } {
-  const { role } = useStore();
+  const { role, business } = useStore();
   const me = useMe();
   const easy = role === 'client' && me.easyView;
-  return { c: easy ? easyColors : colors, k: easy ? 1.25 : role === 'trainer' ? 0.95 : 1, easy };
+  return { c: cachedPalette(business?.theme, easy), k: easy ? 1.25 : role === 'trainer' ? 0.95 : 1, easy };
+}
+
+const paletteCache = new Map<string, Palette>();
+function cachedPalette(theme: Branding | undefined, easy: boolean) {
+  const key = `${theme?.brand ?? ''}|${theme?.ink ?? ''}|${easy}`;
+  let p = paletteCache.get(key);
+  if (!p) {
+    p = paletteFor(theme, easy);
+    paletteCache.set(key, p);
+  }
+  return p;
 }
 
 type TxtProps = {
@@ -117,7 +130,7 @@ export function Button({ title, onPress, icon, variant = 'primary', small, full,
 }) {
   const { c, k } = useUI();
   const bg = { primary: c.brand, ghost: c.surface2, warn: c.warn, danger: c.bad, outline: 'transparent' }[variant];
-  const fg = { primary: c.brandInk, ghost: c.ink, warn: '#FFFFFF', danger: '#FFFFFF', outline: c.brand }[variant];
+  const fg = { primary: c.brandInk, ghost: c.ink, warn: '#FFFFFF', danger: '#FFFFFF', outline: c.brandText }[variant];
   const h = small ? TOUCH * k * 0.92 : 54 * k;
   return (
     <Pressable
@@ -153,6 +166,7 @@ export function Button({ title, onPress, icon, variant = 'primary', small, full,
 export function Chip({ label, on, onPress, icon, tone }: { label: string; on?: boolean; onPress?: () => void; icon?: IconName; tone?: 'danger' }) {
   const { c, k } = useUI();
   const active = on && tone === 'danger' ? c.bad : c.brand;
+  const activeInk = on && tone === 'danger' ? '#FFFFFF' : c.brandInk;
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
@@ -170,8 +184,8 @@ export function Chip({ label, on, onPress, icon, tone }: { label: string; on?: b
         gap: 6,
       }}
     >
-      {icon ? <Icon name={icon} size={18} color={on ? '#FFFFFF' : c.ink} /> : null}
-      <Text style={{ fontFamily: fonts.bold, fontSize: Math.round(15 * k), color: on ? '#FFFFFF' : c.ink }}>{label}</Text>
+      {icon ? <Icon name={icon} size={18} color={on ? activeInk : c.ink} /> : null}
+      <Text style={{ fontFamily: fonts.bold, fontSize: Math.round(15 * k), color: on ? activeInk : c.ink }}>{label}</Text>
     </Pressable>
   );
 }
@@ -179,7 +193,7 @@ export function Chip({ label, on, onPress, icon, tone }: { label: string; on?: b
 export function Tag({ label, tone = 'brand', icon }: { label: string; tone?: 'brand' | 'warn' | 'danger' | 'neutral' | 'ok'; icon?: IconName }) {
   const { c, k } = useUI();
   const map = {
-    brand: [c.brandSoft, c.brand],
+    brand: [c.brandSoft, c.brandText],
     warn: [c.warnSoft, c.warn],
     danger: [c.badSoft, c.bad],
     neutral: [c.surface2, c.muted],
@@ -198,13 +212,34 @@ export function Avatar({ initials, size = 40, brand }: { initials: string; size?
   const { c } = useUI();
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: brand ? c.brand : c.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontFamily: fonts.heavy, fontSize: size * 0.36, color: brand ? c.brandInk : c.brand }}>{initials}</Text>
+      <Text style={{ fontFamily: fonts.heavy, fontSize: size * 0.36, color: brand ? c.brandInk : c.brandText }}>{initials}</Text>
     </View>
   );
 }
 
 // The Snout barbell: a barbell whose plates are pig snouts.
-export function Mark({ size = 36 }: { size?: number }) {
+// Logos built into the app, by key. A business picks one in Branding.
+export const LOGOS: Record<string, { name: string; mark: number; full: number; ratio: number; fullRatio: number }> = {
+  jmh: { name: 'JMH Fitness', mark: require('../../assets/jmh-mark.png'), full: require('../../assets/jmh-logo.png'), ratio: 289 / 600, fullRatio: 378 / 900 },
+};
+
+// The app's mark: the trainer business's own logo when it has one, otherwise
+// the TrainHog snout barbell.
+export function Mark({ size = 36, logo }: { size?: number; logo?: string | null }) {
+  const { business } = useStore();
+  const { c } = useUI();
+  const key = logo === undefined ? business?.logo : logo ?? undefined;
+  const own = key ? LOGOS[key] : undefined;
+  if (own) {
+    return (
+      <View
+        accessibilityLabel={own.name}
+        style={{ width: size, height: size, borderRadius: size * 0.23, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: c.line, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Image source={own.mark} style={{ width: size * 0.78, height: size * 0.78 * own.ratio }} resizeMode="contain" />
+      </View>
+    );
+  }
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel="TrainHog">
       <Defs>
@@ -221,6 +256,19 @@ export function Mark({ size = 36 }: { size?: number }) {
         <Ellipse key={x} cx={x} cy={50} rx={2.8} ry={5.5} fill="#1E5BD8" />
       ))}
     </Svg>
+  );
+}
+
+// "Video by JMH Fitness": credit for the trainer who filmed an exercise.
+export function VideoCredit({ credit }: { credit?: string }) {
+  const { c } = useUI();
+  if (!credit) return null;
+  const logo = Object.entries(LOGOS).find(([, l]) => l.name.toLowerCase() === credit.toLowerCase())?.[0];
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 10, paddingVertical: 4, paddingHorizontal: 8 }} accessibilityLabel={`Video by ${credit}`}>
+      {logo ? <Mark size={24} logo={logo} /> : <Icon name="film" size={16} color={c.muted} />}
+      <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: c.ink }}>Video by {credit}</Text>
+    </View>
   );
 }
 
@@ -248,7 +296,7 @@ export function Thumb({ label, duration, height, width, compact }: { label: stri
       accessibilityLabel={`Video of Hogan demonstrating ${label}`}
       style={{ width: width ?? '100%', height: height ?? undefined, aspectRatio: height ? undefined : 16 / 9, borderRadius: compact ? 12 : 16, overflow: 'hidden', backgroundColor: c.brand }}
     >
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0B2A6B', opacity: 0.35, transform: [{ translateX: 60 }, { rotate: '18deg' }, { scale: 1.6 }] }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1D1D1B', opacity: 0.18, transform: [{ translateX: 60 }, { rotate: '18deg' }, { scale: 1.6 }] }]} />
       <Svg viewBox="0 0 80 90" style={{ position: 'absolute', right: '8%', top: '8%', height: '88%', width: '45%' }}>
         <Circle cx={46} cy={14} r={8} fill="rgba(255,255,255,0.55)" />
         <Path d="M44 24 36 50l20 6 2 26M36 50l-14 8-2 24M42 32l20 4" stroke="rgba(255,255,255,0.55)" strokeWidth={4} fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -356,7 +404,7 @@ export function SectionHead({ title, action, onAction }: { title: string; action
       <H3>{title}</H3>
       {action ? (
         <Pressable accessibilityRole="button" onPress={onAction} style={{ minHeight: TOUCH, justifyContent: 'center', paddingHorizontal: 4 }}>
-          <Text style={{ color: c.brand, fontFamily: fonts.bold, fontSize: 15 }}>{action}</Text>
+          <Text style={{ color: c.brandText, fontFamily: fonts.bold, fontSize: 15 }}>{action}</Text>
         </Pressable>
       ) : null}
     </View>

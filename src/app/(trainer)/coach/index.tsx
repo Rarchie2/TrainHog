@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { CheckInItem, PainCard, WeeklyItem } from '@/components/CoachBits';
 import { Icon } from '@/components/Icon';
-import { Avatar, BodyBold, Button, Card, Eyebrow, Mark, Page, SectionHead, Small, Tag, Title, useLayout, useUI } from '@/components/ui';
+import { Avatar, BodyBold, Button, Card, Eyebrow, H3, Mark, Page, SectionHead, Small, Tag, Title, useLayout, useUI } from '@/components/ui';
 import { DAY_NAMES, isoDate, longDate } from '@/data/sample';
-import { greeting } from '@/data/selectors';
+import { dayItems, greeting } from '@/data/selectors';
 import { useLookups, useStore } from '@/data/store';
 import { fonts } from '@/theme';
 import { APP_NAME } from '@/config';
@@ -24,6 +24,17 @@ export default function Inbox() {
   const joined = st.clients.filter((x) => x.invite === 'joined');
   const trainedThisWeek = new Set(st.logs.filter((l) => l.minutesAgo < 7 * 1440).map((l) => l.clientId)).size;
   const quiet = joined.filter((x) => x.daysSinceActive >= 7);
+  // Sessions planned in the last 7 days that weren't done, newest first.
+  const missed = joined.flatMap((x) =>
+    Array.from({ length: 7 }, (_, n) => {
+      const d = new Date();
+      d.setDate(d.getDate() - 1 - n);
+      const iso = isoDate(d);
+      return dayItems(st, x.id, iso)
+        .filter((it) => !it.done)
+        .map((it) => ({ client: x, iso, label: n === 0 ? 'Yesterday' : longDate(d), session: it.session }));
+    }).flat(),
+  );
   const today = DAY_NAMES[new Date().getDay()];
   const due = st.assignments.filter((a) => a.days.includes(today) || a.days.includes('Daily'));
   const invites = st.clients.filter((x) => x.invite === 'sent' || x.invite === 'guardian-sent');
@@ -42,7 +53,7 @@ export default function Inbox() {
   const inPersonCard = inPersonToday.length ? (
     <Card>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Icon name="users" size={20} color={c.brand} />
+        <Icon name="users" size={20} color={c.brandText} />
         <BodyBold style={{ flex: 1 }}>In person today</BodyBold>
         <Small>Tap to see their last week</Small>
       </View>
@@ -57,14 +68,14 @@ export default function Inbox() {
               onPress={() => router.navigate(`/coach/clients/${who.id}/week`)}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 14, backgroundColor: c.brandSoft, flexGrow: 1, flexBasis: size === 'compact' ? undefined : 240, opacity: pressed ? 0.85 : 1 })}
             >
-              <Text style={{ fontFamily: fonts.displayHeavy, fontSize: 20, color: c.brand, fontVariant: ['tabular-nums'], minWidth: 58 }}>{x.time}</Text>
+              <Text style={{ fontFamily: fonts.displayHeavy, fontSize: 20, color: c.brandText, fontVariant: ['tabular-nums'], minWidth: 58 }}>{x.time}</Text>
               <View style={{ flex: 1 }}>
                 <BodyBold>
                   {who.firstName} {who.lastName}
                 </BodyBold>
                 <Small>{x.place}</Small>
               </View>
-              <Icon name="chev" size={20} color={c.brand} />
+              <Icon name="chev" size={20} color={c.brandText} />
             </Pressable>
           );
         })}
@@ -98,6 +109,32 @@ export default function Inbox() {
 
   const side = (
     <View style={{ gap: 18 }}>
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {missed.length ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.bad }} /> : null}
+          <H3>Missed sessions</H3>
+        </View>
+        {missed.length === 0 ? <Small>Nobody has missed a planned session this week.</Small> : <Small>From the last 7 days. Worth a WhatsApp to check they're okay.</Small>}
+        {missed.slice(0, 8).map((m, n) => (
+          <Pressable
+            key={n}
+            accessibilityRole="button"
+            onPress={() => router.navigate(`/coach/clients/${m.client.id}/calendar`)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 }}
+          >
+            <Avatar initials={m.client.initials} size={40} />
+            <View style={{ flex: 1 }}>
+              <BodyBold>
+                {m.client.firstName} {m.client.lastName}
+              </BodyBold>
+              <Small>
+                {m.session.name} · {m.label}
+              </Small>
+            </View>
+            <Icon name="chev" size={20} color={c.muted} />
+          </Pressable>
+        ))}
+      </Card>
       <Card>
         <SectionHead title="Gone quiet" />
         {quiet.length === 0 ? <Small>Everyone has trained this week.</Small> : null}

@@ -103,7 +103,7 @@ export function SignIn() {
             ) : null}
           </Card>
           <Pressable accessibilityRole="button" onPress={st.startDemo} style={{ alignSelf: 'center', minHeight: 48, justifyContent: 'center' }}>
-            <Text style={{ fontFamily: fonts.bold, color: c.brand, fontSize: 16 }}>Just looking? Try the demo</Text>
+            <Text style={{ fontFamily: fonts.bold, color: c.brandText, fontSize: 16 }}>Just looking? Try the demo</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -124,7 +124,7 @@ export function Loading() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, backgroundColor: c.bg }}>
       <Mark size={56} />
-      <ActivityIndicator color={c.brand} />
+      <ActivityIndicator color={c.brandText} />
     </View>
   );
 }

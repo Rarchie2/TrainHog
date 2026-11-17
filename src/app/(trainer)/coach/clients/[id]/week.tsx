@@ -84,8 +84,8 @@ export default function ClientWeek() {
   return (
     <Page maxWidth={1100}>
       <Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/coach'))} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: TOUCH, alignSelf: 'flex-start' }}>
-        <Icon name="back" size={22} color={c.brand} />
-        <BodyBold color={c.brand}>Back</BodyBold>
+        <Icon name="back" size={22} color={c.brandText} />
+        <BodyBold color={c.brandText}>Back</BodyBold>
       </Pressable>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <Avatar initials={who.initials} size={56} />

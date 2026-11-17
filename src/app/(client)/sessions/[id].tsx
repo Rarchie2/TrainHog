@@ -4,6 +4,7 @@ import { Icon } from '@/components/Icon';
 import { Body, BodyBold, Button, Card, Eyebrow, H3, LevelBars, Meta, Page, Small, Tag, Thumb, Title, useLayout, useUI } from '@/components/ui';
 import { prescription } from '@/data/format';
 import { useLookups, useMe, useStore } from '@/data/store';
+import { bySection, effortLabel, groupLabel, groups, sectionLabel } from '@/data/structure';
 import { TOUCH } from '@/theme';
 
 export default function SessionDetail() {
@@ -17,11 +18,12 @@ export default function SessionDetail() {
   if (!s) return <Page><Body>That session could not be found.</Body></Page>;
   const assignment = st.assignments.find((a) => a.clientId === me.id && a.sessionId === id);
   const plan = planFor(me.id, s.id);
+  const g = groups(plan);
 
   const overview = (
     <Card>
       <Thumb label={s.name} duration="1:40" />
-      <Eyebrow color={c.brand}>{s.category}</Eyebrow>
+      <Eyebrow color={c.brandText}>{s.category}</Eyebrow>
       <Title>{s.name}</Title>
       <Body>{s.purpose}</Body>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 4 }}>
@@ -53,29 +55,43 @@ export default function SessionDetail() {
       <H3>{plan.length} exercises</H3>
       <Small>Gym busy? You can do them in any order. Tap "Change order" during the session.</Small>
       {assignment?.plan ? <Tag label="Numbers set for you by Hogan" icon="check" tone="ok" /> : null}
-      {plan.map((x, i) => {
-        const e = exercise(x.exerciseId);
-        return (
-          <View key={i} style={{ flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 6, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
-            <Thumb label={e.name} width={92} compact />
-            <View style={{ flex: 1, gap: 2 }}>
-              <BodyBold>
-                {i + 1}. {e.name}
-              </BodyBold>
-              <Small>{prescription(x)}</Small>
-              {x.note ? <Tag label={x.note} tone="warn" /> : null}
-            </View>
-          </View>
-        );
-      })}
+      {bySection(plan).map((part) => (
+        <View key={part.id} style={{ gap: 4 }}>
+          <Eyebrow color={c.brandText}>{sectionLabel(part.id, s.kind)}</Eyebrow>
+          {part.rows.map(({ x, i }) => {
+            const e = exercise(x.exerciseId);
+            const info = g[i];
+            const extra = [x.tempo ? `Tempo ${x.tempo}` : null, effortLabel(x)].filter(Boolean).join(' · ');
+            return (
+              <View key={i} style={{ flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 6, borderTopWidth: 1, borderTopColor: c.line }}>
+                <Thumb label={e.name} width={92} compact />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <BodyBold>
+                    {info ? `${info.letter}${info.index}` : i + 1}. {e.name}
+                  </BodyBold>
+                  <Small>{prescription(x)}</Small>
+                  {extra ? <Small>{extra}</Small> : null}
+                  {info || x.dropSet ? (
+                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                      {info ? <Tag label={groupLabel(info)} tone="brand" /> : null}
+                      {x.dropSet ? <Tag label="Drop set" tone="warn" /> : null}
+                    </View>
+                  ) : null}
+                  {x.note ? <Tag label={x.note} tone="warn" /> : null}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      ))}
     </Card>
   );
 
   return (
     <Page maxWidth={1100}>
       <Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.navigate('/sessions'))} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: TOUCH, alignSelf: 'flex-start' }}>
-        <Icon name="back" size={22} color={c.brand} />
-        <BodyBold color={c.brand}>My sessions</BodyBold>
+        <Icon name="back" size={22} color={c.brandText} />
+        <BodyBold color={c.brandText}>My sessions</BodyBold>
       </Pressable>
       {size === 'compact' ? (
         <View style={{ gap: 16 }}>

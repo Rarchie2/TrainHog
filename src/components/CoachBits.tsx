@@ -155,8 +155,7 @@ export function ChangesList({ log }: { log: SessionLog }) {
         <View key={ch.exerciseId} style={{ gap: 2 }}>
           <BodyBold>{exercise(ch.exerciseId).name}</BodyBold>
           <Small color={c.ink}>
-            {ch.kinds.map((k) => CHANGE_LABELS[k]).join(', ')}
-            {ch.weightUsed ? ` · used ${ch.weightUsed}` : ''}
+            {[ch.kinds.map((k) => CHANGE_LABELS[k]).join(', '), ch.weightUsed ? `used ${ch.weightUsed}` : '', ch.repsDone ? `did ${ch.repsDone} reps` : ''].filter(Boolean).join(' · ')}
           </Small>
           {ch.note ? <Body>{ch.note}</Body> : null}
         </View>

@@ -121,7 +121,7 @@ export default function Me() {
       ) : (
         <View style={{ borderWidth: 2, borderStyle: 'dashed', borderColor: c.line, borderRadius: radius.lg, padding: 18, gap: 12 }}>
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <Icon name="switch" size={20} color={c.brand} />
+            <Icon name="switch" size={20} color={c.brandText} />
             <H3>Demo controls</H3>
           </View>
           <Body>You're looking at sample data. Nothing here is saved.</Body>

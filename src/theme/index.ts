@@ -1,5 +1,9 @@
-// Design tokens for the white and blue direction (concept A, "Clean cards").
-// Swap `brand` for Hogan's exact brand blue once we have it.
+// Design tokens. TrainHog's own white and blue look (concept A, "Clean cards")
+// is the default. A trainer business can set its own brand colour and text
+// colour (see src/theme/brand.ts), e.g. JMH Fitness.
+//   brand     the colour for buttons, bars and badges
+//   brandInk  text and icons on top of `brand`
+//   brandText the brand colour for text and icons on white (darker if needed to read)
 
 export const colors = {
   bg: '#F5F7FB',
@@ -10,10 +14,11 @@ export const colors = {
   line: '#DCE2EC',
   brand: '#1E5BD8',
   brandInk: '#FFFFFF',
+  brandText: '#1E5BD8',
   brandSoft: '#E3ECFD',
   warn: '#9A5B00',
   warnSoft: '#FCF0DC',
-  // Red is reserved for pain and safety. Never use it for anything else.
+  // Red is reserved for pain, safety and missed sessions.
   bad: '#C0282D',
   badSoft: '#FCE5E5',
   ok: '#1F7A4D',
@@ -28,6 +33,7 @@ export const easyColors = {
   muted: '#2E3A50',
   line: '#8C99B0',
   brand: '#1748B0',
+  brandText: '#1748B0',
 } as const;
 
 export type Palette = { [K in keyof typeof colors]: string };

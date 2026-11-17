@@ -5,6 +5,7 @@ import { Icon } from '@/components/Icon';
 import { NumbersEditor } from '@/components/NumbersEditor';
 import { Body, BodyBold, Button, Card, Page, Small, Tag, Title, useUI } from '@/components/ui';
 import { useLookups, useStore } from '@/data/store';
+import { groupLabel, groups, sectionLabel, sectionOf } from '@/data/structure';
 import type { SessionExercise } from '@/data/types';
 import { fonts, TOUCH } from '@/theme';
 
@@ -21,6 +22,7 @@ export default function ClientPlan() {
   const [saved, setSaved] = useState(false);
   if (!who || !assignment) return <Page><Body>That session could not be found.</Body></Page>;
   const s = session(assignment.sessionId);
+  const g = groups(items);
   const update = (i: number, patch: Partial<SessionExercise>) => {
     setItems(items.map((x, j) => (j === i ? { ...x, ...patch } : x)));
     setSaved(false);
@@ -29,8 +31,8 @@ export default function ClientPlan() {
   return (
     <Page maxWidth={860}>
       <Pressable accessibilityRole="button" onPress={() => router.navigate(`/coach/clients/${who.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: TOUCH, alignSelf: 'flex-start' }}>
-        <Icon name="back" size={22} color={c.brand} />
-        <BodyBold color={c.brand}>{who.firstName}</BodyBold>
+        <Icon name="back" size={22} color={c.brandText} />
+        <BodyBold color={c.brandText}>{who.firstName}</BodyBold>
       </Pressable>
       <View style={{ gap: 4 }}>
         <Title>
@@ -41,13 +43,17 @@ export default function ClientPlan() {
       <Card>
         {items.map((x, i) => {
           const e = exercise(x.exerciseId);
+          const info = g[i];
           return (
             <View key={i} style={{ gap: 10, paddingTop: i ? 14 : 0, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Text style={{ fontFamily: fonts.heavy, color: c.brand, fontSize: 16 }}>{i + 1}</Text>
-                <BodyBold style={{ flex: 1 }}>{e.name}</BodyBold>
+                <Text style={{ fontFamily: fonts.heavy, color: c.brandText, fontSize: 16 }}>{i + 1}</Text>
+                <View style={{ flex: 1 }}>
+                  <BodyBold>{e.name}</BodyBold>
+                  <Small>{[sectionLabel(sectionOf(x), s.kind), info ? groupLabel(info) : null].filter(Boolean).join(' · ')}</Small>
+                </View>
               </View>
-              <NumbersEditor x={x} name={e.name} onChange={(patch) => update(i, patch)} />
+              <NumbersEditor x={x} name={e.name} onChange={(patch) => update(i, patch)} restNote={info && info.index < info.size ? `No rest: straight into the next exercise in the ${info.kind}.` : undefined} />
             </View>
           );
         })}

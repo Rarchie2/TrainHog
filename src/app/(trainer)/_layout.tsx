@@ -24,6 +24,7 @@ export default function TrainerLayout() {
           <BodyBold>{active} active clients</BodyBold>
           <Small>Founder plan</Small>
           <Button small icon="plus" title="Add client" onPress={() => router.navigate('/coach/clients?add=1')} />
+          <Button small variant="ghost" icon="star" title="Branding" onPress={() => router.navigate('/coach/branding')} />
           <Button small variant="ghost" icon="switch" title="View client app" onPress={() => {
               st.setRole('client');
               router.navigate('/');

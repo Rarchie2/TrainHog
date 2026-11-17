@@ -4,6 +4,7 @@ import { supabase } from './backend';
 import { agoLabel } from './format';
 import { isoDate, relativeLabel } from './sample';
 import type {
+  Business,
   Assignment,
   BodyweightEntry,
   CheckIn,
@@ -14,6 +15,7 @@ import type {
   ExerciseChange,
   ID,
   InPersonSession,
+  PlannedSession,
   LiftEntry,
   Message,
   PainReport,
@@ -28,6 +30,7 @@ import type {
 export type Account = { userId: ID; email: string; trainer: boolean; clientId?: ID; businessId?: ID };
 
 export type LoadedData = {
+  business: Business | null;
   clients: Client[];
   exercises: Exercise[];
   sessions: Session[];
@@ -42,6 +45,7 @@ export type LoadedData = {
   weekly: WeeklyCheckIn[];
   posts: CommunityPost[];
   inPerson: InPersonSession[];
+  planned: PlannedSession[];
 };
 
 type Row = Record<string, any>;
@@ -85,7 +89,7 @@ async function all(table: string, order?: string): Promise<Row[]> {
 
 // Everything this person may see (the database's rules do the filtering).
 export async function loadAll(account: Account): Promise<LoadedData> {
-  const [clients, priv, members, exercises, sessions, assignments, logs, pain, diary, replies, messages, bodyweights, lifts, weekly, posts, reactions, inPerson] =
+  const [clients, priv, members, exercises, sessions, assignments, logs, pain, diary, replies, messages, bodyweights, lifts, weekly, posts, reactions, inPerson, planned, businesses] =
     await Promise.all([
       all('clients'),
       account.trainer ? all('client_private') : Promise.resolve([]),
@@ -104,6 +108,8 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       all('community_posts', 'created_at'),
       all('post_reactions'),
       all('in_person'),
+      all('planned_sessions'),
+      all('businesses'),
     ]);
 
   const lastLog = new Map<string, string>();
@@ -152,12 +158,19 @@ export async function loadAll(account: Account): Promise<LoadedData> {
     reactionMap.set(r.post_id, m);
   });
 
+  const b = businesses.find((x) => x.id === account.businessId) ?? businesses[0];
   return {
+    business: b
+      ? { id: b.id, name: b.name, trainerName: b.trainer_name, town: b.town ?? '', brandColor: b.brand_color ?? '', theme: b.theme ?? undefined, logo: b.logo ?? undefined }
+      : null,
     clients: mapped,
     exercises: exercises.map((e) => ({
       id: e.id,
       businessId: e.business_id,
       name: e.name,
+      category: e.category ?? undefined,
+      videoUrl: e.video_url ?? undefined,
+      videoCredit: e.video_credit ?? undefined,
       videoLength: e.video_length,
       coachingNotes: e.coaching_notes,
       steps: e.steps ?? [],
@@ -170,6 +183,9 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       businessId: s.business_id,
       name: s.name,
       category: s.category,
+      kind: s.kind ?? undefined,
+      programme: s.programme ?? undefined,
+      phase: s.phase ?? undefined,
       minutes: s.minutes,
       equipment: s.equipment,
       level: s.level,
@@ -186,6 +202,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       favourite: a.favourite,
       isNew: a.is_new,
       plan: a.plan ?? undefined,
+      createdOn: a.created_at ? isoDate(new Date(a.created_at)) : undefined,
     })),
     logs: logs.map((l) => ({
       id: l.id,
@@ -238,6 +255,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       reactions: reactionMap.get(p.id) ?? {},
     })),
     inPerson: inPerson.map((i) => ({ id: i.id, clientId: i.client_id, date: i.date, time: i.time, place: i.place })),
+    planned: planned.map((x) => ({ id: x.id, clientId: x.client_id, sessionId: x.session_id, date: x.date, position: x.position ?? 0 })),
   };
 }
 
@@ -267,11 +285,20 @@ export const save = {
   message: (b: ID, m: Message) => ok(db().from('messages').insert({ id: m.id, business_id: b, client_id: m.clientId, text: m.text }), 'the message'),
   assignment: (b: ID, a: Assignment) =>
     ok(db().from('assignments').upsert({ id: a.id, business_id: b, client_id: a.clientId, session_id: a.sessionId, days: a.days, favourite: !!a.favourite, is_new: !!a.isNew, plan: a.plan ?? null }), 'the assignment'),
+  plan: (b: ID, rows: PlannedSession[]) =>
+    ok(db().from('planned_sessions').insert(rows.map((x) => ({ id: x.id, business_id: b, client_id: x.clientId, session_id: x.sessionId, date: x.date, position: x.position }))), 'the calendar'),
+  branding: (b: ID, theme: Business['theme'] | null, logo: string | null) => ok(db().from('businesses').update({ theme, logo }).eq('id', b), 'the branding'),
+  unplan: (id: ID) => ok(db().from('planned_sessions').delete().eq('id', id), 'the calendar'),
   unassign: (id: ID) => ok(db().from('assignments').delete().eq('id', id), 'the change'),
   session: (b: ID, s: Session) =>
     ok(
-      db().from('sessions').insert({ id: s.id, business_id: b, name: s.name, category: s.category, minutes: s.minutes, equipment: s.equipment, level: s.level, purpose: s.purpose, safety_note: s.safetyNote ?? null, exercises: exList(s.exercises) }),
+      db().from('sessions').upsert({ id: s.id, business_id: b, name: s.name, category: s.category, kind: s.kind ?? null, programme: s.programme ?? null, phase: s.phase ?? null, minutes: s.minutes, equipment: s.equipment, level: s.level, purpose: s.purpose, safety_note: s.safetyNote ?? null, exercises: exList(s.exercises), updated_at: new Date().toISOString() }),
       'the session',
+    ),
+  exercise: (b: ID, e: Exercise) =>
+    ok(
+      db().from('exercises').upsert({ id: e.id, business_id: b, name: e.name, category: e.category ?? null, video_url: e.videoUrl ?? null, video_credit: e.videoCredit ?? null, video_length: e.videoLength, coaching_notes: e.coachingNotes, steps: e.steps, easier: e.easier ?? null, harder: e.harder ?? null, tags: e.tags }),
+      'the exercise',
     ),
   client: async (b: ID, c: Client, email?: string) => {
     await ok(

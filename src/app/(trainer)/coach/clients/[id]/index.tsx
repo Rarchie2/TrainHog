@@ -173,8 +173,8 @@ export default function ClientDetail() {
   return (
     <Page>
       <Pressable accessibilityRole="button" onPress={() => router.navigate('/coach/clients')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: TOUCH, alignSelf: 'flex-start' }}>
-        <Icon name="back" size={22} color={c.brand} />
-        <BodyBold color={c.brand}>Clients</BodyBold>
+        <Icon name="back" size={22} color={c.brandText} />
+        <BodyBold color={c.brandText}>Clients</BodyBold>
       </Pressable>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <Avatar initials={who.initials} size={60} />
@@ -186,7 +186,8 @@ export default function ClientDetail() {
             {who.programme} · Last active {who.lastActive.toLowerCase()}
           </Small>
         </View>
-        <Button small variant="ghost" icon="cal" title="Last 7 days" onPress={() => router.navigate(`/coach/clients/${who.id}/week`)} />
+        <Button small icon="cal" title="Calendar" onPress={() => router.navigate(`/coach/clients/${who.id}/calendar`)} />
+        <Button small variant="ghost" icon="list" title="Last 7 days" onPress={() => router.navigate(`/coach/clients/${who.id}/week`)} />
         {who.invite !== 'joined' ? <Button small variant="ghost" icon="send" title="Resend invite" /> : null}
       </View>
       {d.pain.map((p) => (

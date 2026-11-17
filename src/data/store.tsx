@@ -12,6 +12,7 @@ import { type Account, claimAccount, type LoadedData, loadAll, save } from './re
 import * as seed from './sample';
 import type {
   Assignment,
+  Business,
   CheckIn,
   Client,
   CommunityPost,
@@ -20,6 +21,7 @@ import type {
   ExerciseChange,
   ID,
   Message,
+  PlannedSession,
   PainReport,
   Reply,
   Session,
@@ -52,8 +54,17 @@ type Saved = Pick<State, 'weeklyDoneOn' | 'weeklyPromptSeen'>;
 
 const newId = () => uuid();
 
+// "Upper body" -> "Upper body (2)", "Upper body (2)" -> "Upper body (3)".
+function nextName(name: string, taken: string[]) {
+  const base = name.replace(/\s*\((?:copy|\d+)\)$/i, '');
+  let n = Number(name.match(/\((\d+)\)$/)?.[1] ?? 1) + 1;
+  while (taken.includes(`${base} (${n})`)) n++;
+  return `${base} (${n})`;
+}
+
 function demoData(): LoadedData {
   return {
+    business: seed.business,
     clients: seed.clients,
     exercises: seed.exercises,
     sessions: seed.sessions,
@@ -68,9 +79,10 @@ function demoData(): LoadedData {
     weekly: seed.weeklyCheckIns,
     posts: seed.communityPosts,
     inPerson: seed.inPerson,
+    planned: seed.planned,
   };
 }
-const EMPTY: LoadedData = { clients: [], exercises: [], sessions: [], assignments: [], logs: [], pain: [], diary: [], replies: [], messages: [], bodyweights: [], lifts: [], weekly: [], posts: [], inPerson: [] };
+const EMPTY: LoadedData = { business: null, clients: [], exercises: [], sessions: [], assignments: [], logs: [], pain: [], diary: [], replies: [], messages: [], bodyweights: [], lifts: [], weekly: [], posts: [], inPerson: [], planned: [] };
 
 function initialState(): State {
   return {
@@ -108,8 +120,16 @@ type Actions = {
   sendMessage: (clientId: ID, text: string) => void;
   toggleFavourite: (assignmentId: ID) => void;
   saveSession: (session: Omit<Session, 'id' | 'businessId' | 'updated'>, assignTo: ID[], days?: string[]) => ID;
+  updateSession: (id: ID, patch: Partial<Omit<Session, 'id' | 'businessId'>>) => void;
+  duplicateSession: (id: ID) => ID | undefined;
+  addExercise: (e: Omit<Exercise, 'id' | 'businessId' | 'videoLength' | 'steps' | 'tags'> & Partial<Pick<Exercise, 'steps' | 'tags'>>) => Exercise;
+  updateExercise: (id: ID, patch: Partial<Omit<Exercise, 'id' | 'businessId'>>) => void;
   assign: (clientId: ID, sessionId: ID, days?: string[]) => void;
   setDays: (assignmentId: ID, days: string[]) => void;
+  planSession: (clientId: ID, sessionId: ID, date: string) => void;
+  unplan: (id: ID) => void;
+  copyWeek: (clientId: ID, fromMonday: string, weeks: number) => number; // how many sessions were added
+  setBranding: (theme: Business['theme'] | undefined, logo: string | undefined) => void;
   unassign: (assignmentId: ID) => void;
   addClient: (firstName: string, lastName: string, contact: string, easyView: boolean) => void;
   reset: () => void;
@@ -382,6 +402,47 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     [remote],
   );
+  const updateSession = useCallback(
+    (id: ID, patch: Partial<Omit<Session, 'id' | 'businessId'>>) => {
+      const old = ref.current.sessions.find((x) => x.id === id);
+      if (!old) return;
+      const next: Session = { ...old, ...patch, updated: 'Just now' };
+      set((s) => ({ ...s, sessions: s.sessions.map((x) => (x.id === id ? next : x)) }));
+      remote(() => save.session(biz(), next));
+    },
+    [remote],
+  );
+  // A copy to tweak, e.g. week 2 of a block. Clients aren't copied across.
+  const duplicateSession = useCallback(
+    (id: ID) => {
+      const old = ref.current.sessions.find((x) => x.id === id);
+      if (!old) return undefined;
+      const copy: Session = { ...old, id: newId(), name: nextName(old.name, ref.current.sessions.map((x) => x.name)), exercises: old.exercises.map((x) => ({ ...x })), updated: 'Just now' };
+      set((s) => ({ ...s, sessions: [...s.sessions, copy] }));
+      remote(() => save.session(biz(), copy));
+      return copy.id;
+    },
+    [remote],
+  );
+  const addExercise = useCallback(
+    (input: Omit<Exercise, 'id' | 'businessId' | 'videoLength' | 'steps' | 'tags'> & Partial<Pick<Exercise, 'steps' | 'tags'>>) => {
+      const e: Exercise = { steps: [], tags: [], ...input, id: newId(), businessId: ref.current.account?.businessId ?? 'b1', videoLength: '' };
+      set((s) => ({ ...s, exercises: [...s.exercises, e] }));
+      remote(() => save.exercise(biz(), e));
+      return e;
+    },
+    [remote],
+  );
+  const updateExercise = useCallback(
+    (id: ID, patch: Partial<Omit<Exercise, 'id' | 'businessId'>>) => {
+      const old = ref.current.exercises.find((x) => x.id === id);
+      if (!old) return;
+      const next = { ...old, ...patch };
+      set((s) => ({ ...s, exercises: s.exercises.map((x) => (x.id === id ? next : x)) }));
+      remote(() => save.exercise(biz(), next));
+    },
+    [remote],
+  );
   // Assigning a session the client already has just updates its days.
   const assign = useCallback(
     (clientId: ID, sessionId: ID, days: string[] = []) => {
@@ -392,6 +453,57 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       remote(() => save.assignment(biz(), a));
     },
     [updateAssignment, remote],
+  );
+  // The business's own colours and logo. Empty means TrainHog's look.
+  const setBranding = useCallback(
+    (theme: Business['theme'] | undefined, logo: string | undefined) => {
+      set((s) => ({ ...s, business: s.business ? { ...s.business, theme, logo } : s.business }));
+      remote(() => save.branding(biz(), theme ?? null, logo ?? null));
+    },
+    [remote],
+  );
+  // Calendar: put a session on a date, take it off, or copy a week forward.
+  const planSession = useCallback(
+    (clientId: ID, sessionId: ID, date: string) => {
+      const sameDay = ref.current.planned.filter((x) => x.clientId === clientId && x.date === date);
+      const p: PlannedSession = { id: newId(), clientId, sessionId, date, position: sameDay.length };
+      set((s) => ({ ...s, planned: [...s.planned, p] }));
+      remote(() => save.plan(biz(), [p]));
+    },
+    [remote],
+  );
+  const unplan = useCallback(
+    (id: ID) => {
+      set((s) => ({ ...s, planned: s.planned.filter((x) => x.id !== id) }));
+      remote(() => save.unplan(id));
+    },
+    [remote],
+  );
+  const copyWeek = useCallback(
+    (clientId: ID, fromMonday: string, weeks: number) => {
+      const start = new Date(fromMonday + 'T12:00:00');
+      const inWeek = (iso: string, k: number) => {
+        const d = Math.round((new Date(iso + 'T12:00:00').getTime() - start.getTime()) / 86400000);
+        return d >= k * 7 && d < k * 7 + 7;
+      };
+      const source = ref.current.planned.filter((x) => x.clientId === clientId && inWeek(x.date, 0));
+      const added: PlannedSession[] = [];
+      for (let w = 1; w <= weeks; w++) {
+        for (const x of source) {
+          const d = new Date(x.date + 'T12:00:00');
+          d.setDate(d.getDate() + 7 * w);
+          const date = seed.isoDate(d);
+          const taken = [...ref.current.planned, ...added].some((y) => y.clientId === clientId && y.date === date && y.sessionId === x.sessionId);
+          if (!taken) added.push({ id: newId(), clientId, sessionId: x.sessionId, date, position: x.position });
+        }
+      }
+      if (added.length) {
+        set((s) => ({ ...s, planned: [...s.planned, ...added] }));
+        remote(() => save.plan(biz(), added));
+      }
+      return added.length;
+    },
+    [remote],
   );
   const setDays = useCallback((assignmentId: ID, days: string[]) => updateAssignment(assignmentId, { days }), [updateAssignment]);
   const setPlan = useCallback((assignmentId: ID, plan: SessionExercise[]) => updateAssignment(assignmentId, { plan, isNew: true }), [updateAssignment]);
@@ -491,7 +603,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions: Actions = {
     setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage,
-    toggleFavourite, saveSession, assign, setDays, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
+    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, setBranding, unassign, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
     setCommunity, post, react, setPlan, reset, startDemo, sendCode, verifyCode, signOut, refresh, refreshAccount, clearSyncError,
   };
   // Every action above is stable (useCallback), so this only changes with the data.
