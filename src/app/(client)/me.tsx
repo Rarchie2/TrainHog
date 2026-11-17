@@ -4,7 +4,10 @@ import { Pressable, Text, View } from 'react-native';
 import { MobileTopBar } from '@/components/ClientBits';
 import { Icon } from '@/components/Icon';
 import { Avatar, Body, BodyBold, Button, Card, Columns, H3, Page, Small, Title, Toggle, useLayout, useUI } from '@/components/ui';
+import { supabase } from '@/data/backend';
 import { useMe, useStore } from '@/data/store';
+
+const isLiveCapable = !!supabase;
 import { fonts, radius, TOUCH } from '@/theme';
 
 function Row({ title, sub, children, onPress }: { title: string; sub?: string; children?: React.ReactNode; onPress?: () => void }) {
@@ -98,23 +101,43 @@ export default function Me() {
         </Card>
       </Columns>
 
-      <View style={{ borderWidth: 2, borderStyle: 'dashed', borderColor: c.line, borderRadius: radius.lg, padding: 18, gap: 12 }}>
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          <Icon name="switch" size={20} color={c.brand} />
-          <H3>Demo controls</H3>
+      {st.mode === 'live' ? (
+        <Card>
+          <H3>Account</H3>
+          <Small>Signed in as {st.account?.email}</Small>
+          {st.account?.trainer ? (
+            <>
+              <Text style={{ fontFamily: fonts.bold, color: c.muted, fontSize: 14 }}>PREVIEW THE APP AS</Text>
+              <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+                {st.clients.map((x) => (
+                  <Button key={x.id} small variant={x.id === me.id ? 'primary' : 'ghost'} title={x.firstName} onPress={() => st.setClient(x.id)} />
+                ))}
+              </View>
+              <Button small variant="outline" icon="inbox" title="Back to my dashboard" onPress={() => router.navigate('/coach')} />
+            </>
+          ) : null}
+          <Button small variant="ghost" title="Sign out" onPress={st.signOut} />
+        </Card>
+      ) : (
+        <View style={{ borderWidth: 2, borderStyle: 'dashed', borderColor: c.line, borderRadius: radius.lg, padding: 18, gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <Icon name="switch" size={20} color={c.brand} />
+            <H3>Demo controls</H3>
+          </View>
+          <Body>You're looking at sample data. Nothing here is saved.</Body>
+          <Text style={{ fontFamily: fonts.bold, color: c.muted, fontSize: 14 }}>VIEW THE APP AS</Text>
+          <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+            {st.clients
+              .filter((x) => x.id === 'c1' || x.id === 'c2')
+              .map((x) => (
+                <Button key={x.id} small variant={x.id === me.id ? 'primary' : 'ghost'} title={`${x.firstName}${x.easyView ? ' (Easy view)' : ''}`} onPress={() => st.setClient(x.id)} />
+              ))}
+            <Button small variant="outline" icon="inbox" title="Hogan's dashboard" onPress={() => router.navigate('/coach')} />
+          </View>
+          <Button small variant="ghost" title="Reset the demo data" onPress={st.reset} />
+          {isLiveCapable ? <Button small icon="user" title="Leave the demo and sign in" onPress={st.signOut} /> : null}
         </View>
-        <Body>These are only here for showing the app. They won't be in the real thing.</Body>
-        <Text style={{ fontFamily: fonts.bold, color: c.muted, fontSize: 14 }}>VIEW THE APP AS</Text>
-        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-          {st.clients
-            .filter((x) => x.id === 'c1' || x.id === 'c2')
-            .map((x) => (
-              <Button key={x.id} small variant={x.id === me.id ? 'primary' : 'ghost'} title={`${x.firstName}${x.easyView ? ' (Easy view)' : ''}`} onPress={() => st.setClient(x.id)} />
-            ))}
-          <Button small variant="outline" icon="inbox" title="Hogan's dashboard" onPress={() => router.navigate('/coach')} />
-        </View>
-        <Button small variant="ghost" title="Reset the demo data" onPress={st.reset} />
-      </View>
+      )}
     </Page>
   );
 }

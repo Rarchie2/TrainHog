@@ -136,9 +136,13 @@ function AddClient({ onDone }: { onDone: () => void }) {
       <Card tone="soft">
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
           <Icon name="check" size={22} color={c.ok} />
-          <BodyBold>Invite sent to {sent}</BodyBold>
+          <BodyBold>{st.mode === 'live' ? `${sent} is added` : `Invite sent to ${sent}`}</BodyBold>
         </View>
-        <Body>They'll get a text or email saying "Hogan has set up your training plan. Tap to open." No password needed.</Body>
+        {st.mode === 'live' ? (
+          <Body>Ask them to download TrainHog and sign in with {contact.trim()}. They'll get a 6-digit code by email, no password needed, and their plan will be waiting.</Body>
+        ) : (
+          <Body>They'll get a text or email saying "Hogan has set up your training plan. Tap to open." No password needed.</Body>
+        )}
         <Button small variant="ghost" title="Done" onPress={onDone} />
       </Card>
     );
@@ -146,11 +150,11 @@ function AddClient({ onDone }: { onDone: () => void }) {
   return (
     <Card>
       <H3>Add a client</H3>
-      <Small>They get a one-tap invite link. Nobody picks a password.</Small>
+      <Small>{st.mode === 'live' ? 'They sign in with this email and a 6-digit code. Nobody picks a password.' : 'They get a one-tap invite link. Nobody picks a password.'}</Small>
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
         <TextInput value={first} onChangeText={setFirst} placeholder="First name" placeholderTextColor={c.muted} style={input} accessibilityLabel="First name" />
         <TextInput value={last} onChangeText={setLast} placeholder="Last name" placeholderTextColor={c.muted} style={input} accessibilityLabel="Last name" />
-        <TextInput value={contact} onChangeText={setContact} placeholder="Mobile number or email" placeholderTextColor={c.muted} style={input} accessibilityLabel="Mobile number or email" />
+        <TextInput value={contact} onChangeText={setContact} placeholder={st.mode === 'live' ? 'Their email' : 'Mobile number or email'} placeholderTextColor={c.muted} autoCapitalize="none" keyboardType={st.mode === 'live' ? 'email-address' : 'default'} style={input} accessibilityLabel="Email" />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <Toggle label="Start in Easy view" value={easy} onChange={setEasy} />
@@ -160,8 +164,8 @@ function AddClient({ onDone }: { onDone: () => void }) {
         <Button
           small
           icon="send"
-          title="Send invite"
-          disabled={!first.trim() || !contact.trim()}
+          title={st.mode === 'live' ? 'Add client' : 'Send invite'}
+          disabled={!first.trim() || !contact.trim() || (st.mode === 'live' && !/^\S+@\S+\.\S+$/.test(contact.trim()))}
           onPress={() => {
             st.addClient(first.trim(), last.trim(), contact.trim(), easy);
             setSent(first.trim());
