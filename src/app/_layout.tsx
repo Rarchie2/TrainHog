@@ -12,10 +12,12 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Loading, NoAccount, SignIn, SyncBanner } from '@/components/SignIn';
+import { useOtaUpdate } from '@/data/otaUpdate';
 import { StoreProvider, useStore } from '@/data/store';
 import { colors } from '@/theme';
 
 export default function RootLayout() {
+  useOtaUpdate();
   const [loaded] = useFonts({
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
