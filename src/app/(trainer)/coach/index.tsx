@@ -208,7 +208,10 @@ export default function Inbox() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Mark size={32} />
           <Text style={{ fontFamily: fonts.display, fontSize: 17, color: c.ink, flex: 1 }}>{APP_NAME} Coach</Text>
-          <Button small variant="ghost" icon="switch" title="Client app" onPress={() => router.navigate('/')} />
+          <Button small variant="ghost" icon="switch" title="Client app" onPress={() => {
+              st.setRole('client');
+              router.navigate('/');
+            }} />
         </View>
       ) : null}
       <View style={{ flexDirection: size === 'compact' ? 'column' : 'row', alignItems: size === 'compact' ? 'flex-start' : 'flex-end', gap: 12 }}>

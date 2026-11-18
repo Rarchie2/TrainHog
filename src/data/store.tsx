@@ -273,7 +273,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const clearSyncError = useCallback(() => set((s) => ({ ...s, syncError: null })), []);
 
   // ------------------------------------------------ actions
-  const setRole = useCallback((role: Role) => set((s) => ({ ...s, role })), []);
+  // Switching to the client app: if the client being previewed is missing
+  // (e.g. a trainer who added their first client after signing in), pick one.
+  const setRole = useCallback(
+    (role: Role) =>
+      set((s) => ({
+        ...s,
+        role,
+        clientId: role === 'client' && !s.clients.some((c) => c.id === s.clientId) ? s.clients[0]?.id ?? s.clientId : s.clientId,
+      })),
+    [],
+  );
   const setClient = useCallback((clientId: ID) => set((s) => ({ ...s, clientId })), []);
   const setEasyView = useCallback(
     (clientId: ID, on: boolean) => {
