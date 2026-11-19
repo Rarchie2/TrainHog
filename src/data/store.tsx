@@ -140,6 +140,7 @@ type Actions = {
   setDeload: (clientId: ID, monday: string, on: boolean) => void;
   makeDeload: (sessionId: ID, percent: number, opts: { sets: boolean; weight: boolean }) => ID | undefined;
   addClient: (firstName: string, lastName: string, contact: string, easyView: boolean) => void;
+  updateProfile: (clientId: ID, patch: { goals: string; conditions: string; trainerNotes: string }) => void;
   reset: () => void;
   // Sign-in
   startDemo: () => void;
@@ -588,6 +589,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     [remote],
   );
+  // The trainer writes a client's goals, injuries and conditions, and private notes.
+  const updateProfile = useCallback(
+    (clientId: ID, patch: { goals: string; conditions: string; trainerNotes: string }) => {
+      setClientFields(clientId, patch);
+      remote(() => save.clientFields(clientId, { goals: patch.goals, conditions: patch.conditions }));
+      remote(() => save.trainerNotes(biz(), clientId, patch.trainerNotes));
+    },
+    [remote, setClientFields],
+  );
   const addClient = useCallback(
     (firstName: string, lastName: string, contact: string, easyView: boolean) => {
       const email = contact.includes('@') ? contact.trim().toLowerCase() : undefined;
@@ -677,7 +687,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions: Actions = {
     setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage,
-    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, setBranding, unassign, setDailyGoals, tickGoal, setDeload, makeDeload, addClient, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
+    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, setBranding, unassign, setDailyGoals, tickGoal, setDeload, makeDeload, addClient, updateProfile, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
     setCommunity, post, react, setPlan, reset, startDemo, sendCode, verifyCode, signOut, refresh, refreshAccount, clearSyncError,
   };
   // Every action above is stable (useCallback), so this only changes with the data.

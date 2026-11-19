@@ -11,20 +11,27 @@ import { fonts, radius, TOUCH } from '@/theme';
 
 const HEAD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const AHEAD = 8; // weeks shown in the plan-ahead strip
+
 // Hogan's calendar for one client: tap a day, add sessions to it, and copy a
-// week forward to build out a block. Missed days get a red marker.
+// week forward to build out a block. Week view by default (step a week at a
+// time, with the next 8 weeks at a glance); month view for the bigger picture.
+// Missed days get a red marker. Clients only ever see the current week.
 export default function ClientCalendar() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, week } = useLocalSearchParams<{ id: string; week?: string }>();
   const st = useStore();
   const { c } = useUI();
   const { size } = useLayout();
   const who = st.clients.find((x) => x.id === id);
   const todayIso = isoDate(new Date());
+  const thisMonday = isoDate(startOfWeek());
+  const opened = week && /^\d{4}-\d{2}-\d{2}$/.test(week) ? week : todayIso;
+  const [view, setView] = useState<'week' | 'month'>('week');
   const [month, setMonth] = useState(() => {
-    const d = new Date();
+    const d = new Date(opened + 'T12:00:00');
     return new Date(d.getFullYear(), d.getMonth(), 1, 12);
   });
-  const [selected, setSelected] = useState(todayIso);
+  const [selected, setSelected] = useState(opened);
   const [q, setQ] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
   if (!who) return <Page><Body>Client not found.</Body></Page>;
@@ -51,8 +58,142 @@ export default function ClientCalendar() {
   const input = { minHeight: 50, borderWidth: 1.5, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, fontFamily: fonts.body, fontSize: 16, color: c.ink, backgroundColor: c.surface } as const;
   const cell = size === 'compact' ? 48 : 92;
 
+  // Week view: move the selected day a week at a time.
+  const plusDays = (iso: string, n: number) => {
+    const d = new Date(iso + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return isoDate(d);
+  };
+  const shiftWeek = (n: number) => {
+    const next = plusDays(selected, 7 * n);
+    setSelected(next);
+    setMonth(new Date(new Date(next + 'T12:00:00').getFullYear(), new Date(next + 'T12:00:00').getMonth(), 1, 12));
+    setCopied(null);
+  };
+  const weeksAway = Math.round((new Date(weekStart + 'T12:00:00').getTime() - new Date(thisMonday + 'T12:00:00').getTime()) / (7 * 86400000));
+  const weekLabel = weeksAway === 0 ? 'This week' : weeksAway === 1 ? 'Next week' : weeksAway === -1 ? 'Last week' : weeksAway > 0 ? `In ${weeksAway} weeks` : `${-weeksAway} weeks ago`;
+  const shortDate = (iso: string) => {
+    const d = new Date(iso + 'T12:00:00');
+    return `${d.getDate()} ${monthName(d).slice(0, 3)}`;
+  };
+  const weekDays = Array.from({ length: 7 }, (_, i) => plusDays(weekStart, i));
+  const ahead = Array.from({ length: AHEAD }, (_, i) => {
+    const monday = plusDays(thisMonday, 7 * i);
+    const count = Array.from({ length: 7 }, (_, j) => dayItems(st, who.id, plusDays(monday, j)).length).reduce((a, b) => a + b, 0);
+    return { monday, count, deload: (who.deloadWeeks ?? []).includes(monday) };
+  });
+
+  const viewSwitch = (
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      <Chip label="Week" icon="list" on={view === 'week'} onPress={() => setView('week')} />
+      <Chip
+        label="Month"
+        icon="cal"
+        on={view === 'month'}
+        onPress={() => {
+          setMonth(new Date(sel.getFullYear(), sel.getMonth(), 1, 12));
+          setView('month');
+        }}
+      />
+    </View>
+  );
+
+  const weekGrid = (
+    <Card>
+      {viewSwitch}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Previous week" onPress={() => shiftWeek(-1)} style={{ minWidth: TOUCH, minHeight: TOUCH, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="back" size={22} color={c.brandText} />
+        </Pressable>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <H3 style={{ textAlign: 'center' }}>
+            {shortDate(weekStart)} to {shortDate(plusDays(weekStart, 6))}
+          </H3>
+          <Small>{weekLabel}</Small>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Next week" onPress={() => shiftWeek(1)} style={{ minWidth: TOUCH, minHeight: TOUCH, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="chev" size={22} color={c.brandText} />
+        </Pressable>
+      </View>
+      {weeksAway !== 0 ? (
+        <Pressable accessibilityRole="button" onPress={() => setSelected(todayIso)} style={{ alignSelf: 'center', minHeight: 36, justifyContent: 'center' }}>
+          <BodyBold color={c.brandText}>Back to this week</BodyBold>
+        </Pressable>
+      ) : null}
+      {(who.deloadWeeks ?? []).includes(weekStart) ? <Tag label="Deload week" tone="warn" /> : null}
+      <View>
+        {weekDays.map((iso, n) => {
+          const d = new Date(iso + 'T12:00:00');
+          const its = dayItems(st, who.id, iso);
+          const missed = isMissed(its, iso);
+          const on = iso === selected;
+          return (
+            <Pressable
+              key={iso}
+              accessibilityRole="button"
+              accessibilityLabel={`${longDate(d)}, ${its.length} session${its.length === 1 ? '' : 's'}${missed ? ', missed' : ''}`}
+              onPress={() => setSelected(iso)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                minHeight: 52,
+                paddingHorizontal: 8,
+                paddingVertical: 6,
+                borderRadius: 10,
+                borderWidth: on ? 2 : 0,
+                borderColor: c.brand,
+                borderTopWidth: on ? 2 : n ? 1 : 0,
+                borderTopColor: on ? c.brand : c.line,
+                backgroundColor: iso === todayIso ? c.brandSoft : 'transparent',
+              }}
+            >
+              <View style={{ width: 44 }}>
+                <Small style={{ fontFamily: fonts.bold }}>{HEAD[n]}</Small>
+                <BodyBold>{d.getDate()}</BodyBold>
+              </View>
+              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                {its.length === 0 ? <Small>Rest</Small> : null}
+                {its.map((x, k) => (
+                  <Text key={k} numberOfLines={1} style={{ fontFamily: fonts.medium, fontSize: 13, color: x.done ? c.ok : c.ink, backgroundColor: x.planned ? c.brandSoft : c.surface2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, overflow: 'hidden' }}>
+                    {x.session.name}
+                  </Text>
+                ))}
+              </View>
+              {missed ? <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: c.bad }} /> : its.length && its.every((x) => x.done) ? <Icon name="check" size={16} color={c.ok} /> : null}
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={{ gap: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.line }}>
+        <BodyBold>Next {AHEAD} weeks</BodyBold>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {ahead.map((w, i) => {
+            const on = w.monday === weekStart;
+            return (
+              <Pressable
+                key={w.monday}
+                accessibilityRole="button"
+                accessibilityLabel={`Week of ${shortDate(w.monday)}, ${w.count} session${w.count === 1 ? '' : 's'}`}
+                onPress={() => {
+                  setSelected(w.monday);
+                  setCopied(null);
+                }}
+                style={{ minWidth: 76, flexGrow: 1, flexBasis: '22%', minHeight: TOUCH, padding: 8, borderRadius: 10, borderWidth: on ? 2 : 1, borderColor: on ? c.brand : c.line, backgroundColor: w.deload ? c.warnSoft : c.surface, gap: 2 }}
+              >
+                <Small style={{ fontFamily: fonts.bold }}>{i === 0 ? 'This week' : shortDate(w.monday)}</Small>
+                <Small color={w.count ? c.ink : c.muted}>{w.count ? `${w.count} session${w.count === 1 ? '' : 's'}` : 'Empty'}</Small>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    </Card>
+  );
+
   const grid = (
     <Card>
+      {viewSwitch}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => shift(-1)} style={{ minWidth: TOUCH, minHeight: TOUCH, alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="back" size={22} color={c.brandText} />
@@ -172,10 +313,10 @@ export default function ClientCalendar() {
         {weekDated ? (
           <View style={{ gap: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.line }}>
             <Small>
-              Copy this week ({weekDated} session{weekDated === 1 ? '' : 's'}) to the next
+              Repeat this week's {weekDated} session{weekDated === 1 ? '' : 's'} (put on dates) for the next
             </Small>
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-              {[1, 3, 7].map((n) => (
+              {[1, 3, 7, 11].map((n) => (
                 <Chip
                   key={n}
                   label={n === 1 ? '1 week' : `${n} weeks`}
@@ -226,16 +367,16 @@ export default function ClientCalendar() {
       </Pressable>
       <View style={{ gap: 4 }}>
         <Title>{who.firstName}'s calendar</Title>
-        <Small>Tap a day to add sessions. {who.firstName} sees Monday to Sunday of the current week.</Small>
+        <Small>Plan as many weeks ahead as you like. {who.firstName} only sees Monday to Sunday of the current week.</Small>
       </View>
       {size === 'wide' ? (
         <View style={{ flexDirection: 'row', gap: 20, alignItems: 'flex-start' }}>
-          <View style={{ flex: 1.6 }}>{grid}</View>
+          <View style={{ flex: 1.6 }}>{view === 'week' ? weekGrid : grid}</View>
           <View style={{ flex: 1 }}>{day}</View>
         </View>
       ) : (
         <View style={{ gap: 16 }}>
-          {grid}
+          {view === 'week' ? weekGrid : grid}
           {day}
         </View>
       )}
