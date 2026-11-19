@@ -20,16 +20,65 @@ export default function ClientDetail() {
   const d = useClientData(id);
   const [msg, setMsg] = useState('');
   const [sent, setSent] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ goals: '', conditions: '', trainerNotes: '' });
   if (!who) return <Page><Body>Client not found.</Body></Page>;
 
   const efforts = d.logs.filter((l) => l.checkIn).slice(0, 8).reverse();
 
-  const profile = (
+  // Placeholders a new client starts with; shown as empty boxes when editing.
+  const blank = (v: string) => (!v || v === 'To be agreed.' || v === 'Not recorded yet.' ? '' : v);
+  const startEdit = () => {
+    setForm({ goals: blank(who.goals), conditions: blank(who.conditions), trainerNotes: who.trainerNotes });
+    setEditing(true);
+  };
+  const box = { minHeight: 76, borderWidth: 1.5, borderColor: c.line, borderRadius: radius.md, padding: 12, fontFamily: fonts.body, fontSize: 16, color: c.ink, backgroundColor: c.surface, textAlignVertical: 'top' } as const;
+  const fields: { key: keyof typeof form; label: string; hint: string; placeholder: string }[] = [
+    { key: 'goals', label: 'Goals', hint: '', placeholder: 'For example: Lose 5 kg by summer and run a 10k' },
+    { key: 'conditions', label: 'Injuries or conditions', hint: '', placeholder: 'For example: Old left knee injury, mild asthma' },
+    { key: 'trainerNotes', label: 'Notes only you can see', hint: `${who.firstName} never sees these.`, placeholder: 'Anything you want to remember' },
+  ];
+
+  const profile = editing ? (
     <Card>
-      <H3>Profile</H3>
+      <H3>Edit {who.firstName}'s profile</H3>
+      {fields.map((f) => (
+        <View key={f.key} style={{ gap: 4 }}>
+          <BodyBold>{f.label}</BodyBold>
+          {f.hint ? <Small>{f.hint}</Small> : null}
+          <TextInput
+            value={form[f.key]}
+            onChangeText={(t) => setForm((x) => ({ ...x, [f.key]: t }))}
+            multiline
+            placeholder={f.placeholder}
+            placeholderTextColor={c.muted}
+            accessibilityLabel={f.label}
+            style={box}
+          />
+        </View>
+      ))}
+      <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+        <Button
+          small
+          icon="check"
+          title="Save"
+          onPress={() => {
+            st.updateProfile(who.id, { goals: form.goals.trim(), conditions: form.conditions.trim(), trainerNotes: form.trainerNotes.trim() });
+            setEditing(false);
+          }}
+        />
+        <Button small variant="ghost" title="Cancel" onPress={() => setEditing(false)} />
+      </View>
+    </Card>
+  ) : (
+    <Card>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <H3>Profile</H3>
+        <Button small variant="ghost" title="Edit" onPress={startEdit} />
+      </View>
       {[
-        ['Goals', who.goals],
-        ['Injuries or conditions', who.conditions],
+        ['Goals', blank(who.goals) || 'Not recorded yet. Tap Edit to add them.'],
+        ['Injuries or conditions', blank(who.conditions) || 'None recorded. Tap Edit to add any.'],
         ['Contact', who.contact],
         ['Programme', who.programme],
       ].map(([k, v]) => (
@@ -86,8 +135,10 @@ export default function ClientDetail() {
     <Card>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <H3>{who.firstName}'s week</H3>
-        <Button small icon="plus" title="Assign a session" onPress={() => router.navigate(`/coach/clients/${who.id}/assign`)} />
+        <Button small icon="cal" title="Plan weeks ahead" onPress={() => router.navigate(`/coach/clients/${who.id}/calendar`)} />
       </View>
+      <Small>Use the calendar to put sessions on dates up to 8 weeks or more ahead. Use "Every week on set days" for a session that repeats on the same days.</Small>
+      <Button small variant="ghost" icon="plus" title="Every week on set days" onPress={() => router.navigate(`/coach/clients/${who.id}/assign`)} />
       <View style={{ gap: 6 }}>
         {byDay.map(({ day, list }) => (
           <View key={day} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>

@@ -316,7 +316,10 @@ export const save = {
   },
   goalDay: (b: ID, g: GoalDay) =>
     ok(db().from('goal_days').upsert({ business_id: b, client_id: g.clientId, day: g.date, hits: g.hits, updated_at: new Date().toISOString() }, { onConflict: 'client_id,day' }), 'your goals'),
-  clientFields: (id: ID, fields: { easy_view?: boolean; community?: boolean; daily_goals?: DailyGoal[]; deload_weeks?: string[] }) => ok(db().from('clients').update(fields).eq('id', id), 'the setting'),
+  clientFields: (id: ID, fields: { easy_view?: boolean; community?: boolean; daily_goals?: DailyGoal[]; deload_weeks?: string[]; goals?: string; conditions?: string }) =>
+    ok(db().from('clients').update(fields).eq('id', id), 'the setting'),
+  trainerNotes: (b: ID, clientId: ID, notes: string) =>
+    ok(db().from('client_private').upsert({ client_id: clientId, business_id: b, trainer_notes: notes }, { onConflict: 'client_id' }), 'the notes'),
   weekly: (b: ID, w: WeeklyCheckIn, answers: WeeklyAnswer[]) =>
     ok(db().from('weekly_checkins').insert({ id: w.id, business_id: b, client_id: w.clientId, date: w.date, answers }), 'the weekly check-in'),
   bodyweight: (b: ID, x: BodyweightEntry) => ok(db().from('bodyweights').upsert({ business_id: b, client_id: x.clientId, date: x.date, kg: x.kg }, { onConflict: 'client_id,date' }), 'the weigh-in'),
