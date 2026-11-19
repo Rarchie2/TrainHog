@@ -4,7 +4,7 @@ export type IconName =
   | 'home' | 'grid' | 'book' | 'user' | 'play' | 'clock' | 'alert' | 'mic' | 'search' | 'plus'
   | 'check' | 'inbox' | 'users' | 'chat' | 'dumbbell' | 'flame' | 'chev' | 'back' | 'spin' | 'heart'
   | 'rehab' | 'speaker' | 'bell' | 'lock' | 'cal' | 'send' | 'star' | 'starFilled' | 'x' | 'pause'
-  | 'balance' | 'switch' | 'film' | 'list';
+  | 'balance' | 'switch' | 'film' | 'list' | 'gear' | 'logout';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -13,6 +13,8 @@ export function Icon({ name, size = 22, color, strokeWidth = 2 }: Props) {
   const p = { stroke: color, strokeWidth, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   const body = (() => {
     switch (name) {
+      case 'gear': return <><Circle {...p} cx={12} cy={12} r={3} /><Path {...p} d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></>;
+      case 'logout': return <><Path {...p} d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><Path {...p} d="m16 17 5-5-5-5M21 12H9" /></>;
       case 'home': return <Path {...p} d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />;
       case 'grid': return <>
         <Rect {...p} x={3.5} y={3.5} width={7} height={7} rx={1.8} /><Rect {...p} x={13.5} y={3.5} width={7} height={7} rx={1.8} />
