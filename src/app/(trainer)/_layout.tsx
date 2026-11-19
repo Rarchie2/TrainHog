@@ -18,6 +18,7 @@ export default function TrainerLayout() {
         { href: '/coach', label: 'Inbox', icon: 'inbox', badge: unread || undefined },
         { href: '/coach/clients', label: 'Clients', icon: 'users', match: (p) => p.startsWith('/coach/clients') },
         { href: '/coach/sessions', label: 'Sessions', icon: 'grid', match: (p) => p.startsWith('/coach/sessions') },
+        { href: '/coach/settings', label: 'Settings', icon: 'gear', match: (p) => p.startsWith('/coach/settings') || p.startsWith('/coach/branding') },
       ]}
       footer={
         <Card tone="soft" style={{ padding: 14, gap: 8 }}>
