@@ -35,6 +35,19 @@ npx eas-cli@latest build --platform ios --profile production --auto-submit
 
 The first run asks to create the Expo project, sign in to Apple and make the certificates; say yes to each. When it finishes, the build goes to App Store Connect and shows up in TestFlight after Apple's processing. Later builds only need the last command.
 
+### Send fixes without a new build (over-the-air updates)
+
+Builds include `expo-updates`, so most changes (screens, wording, fixes, anything in `src/`) can reach TestFlight testers without a new build:
+
+```bash
+git pull
+npx eas-cli@latest update --channel production --message "What changed"
+```
+
+Testers get it the next time they open the app (it restarts itself into the new version). The first time, EAS may ask to set up updates for the project: say yes.
+
+A new build is still needed when a change adds or upgrades a native package (a new `expo-*` or `react-native-*` library, e.g. notifications, camera, widgets) or changes `app.json` settings such as the icon, permissions or plugins. The runtime version uses the `fingerprint` policy, so an update that needs native code TestFlight doesn't have is never sent to it; it just waits for the next build.
+
 **Prefer Xcode, like Mathryx?** Run `npx expo prebuild --platform ios`, then open `ios/TrainHog.xcworkspace` in Xcode and use Product > Archive > Distribute App as usual. (Needs CocoaPods: `brew install cocoapods`.) The `ios/` folder is generated, so don't edit it by hand; change `app.json` and run prebuild again.
 
 ## Put it on your phone as a web app (no App Store needed)
