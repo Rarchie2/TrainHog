@@ -10,6 +10,7 @@ import { AppState } from 'react-native';
 import { authRedirectUrl, signInFromLink, supabase, uuid } from './backend';
 import { type Account, claimAccount, type LoadedData, loadAll, save } from './remote';
 import * as seed from './sample';
+import { isDeloadCopy, plusWeeks, readDeloads } from './deload';
 import { lighterWeight } from './structure';
 import type {
   Assignment,
@@ -19,6 +20,7 @@ import type {
   CommunityPost,
   Exercise,
   DailyGoal,
+  DeloadWeek,
   DiaryEntry,
   ExerciseChange,
   GoalDay,
@@ -35,6 +37,27 @@ import type {
 } from './types';
 
 type Role = 'client' | 'trainer';
+
+// A lighter copy of a session: fewer sets and/or lighter weights. `taken` is
+// the names already used, so the copy gets "(deload)", "(deload 2)", ...
+function deloadCopy(old: Session, percent: number, opts: { sets: boolean; weight: boolean }, taken: string[]): Session {
+  const keep = 1 - percent / 100;
+  const base = old.name.replace(/\s*\((?:deload(?: \d+)?|\d+)\)$/i, '');
+  let name = `${base} (deload)`;
+  for (let n = 2; taken.includes(name); n++) name = `${base} (deload ${n})`;
+  return {
+    ...old,
+    id: newId(),
+    name,
+    updated: 'Just now',
+    exercises: old.exercises.map((x) => ({
+      ...x,
+      sets: opts.sets ? Math.max(1, Math.round(x.sets * keep)) : x.sets,
+      weight: opts.weight && x.weight ? lighterWeight(x.weight, keep) : x.weight,
+      dropSet: opts.sets ? false : x.dropSet,
+    })),
+  };
+}
 
 // demo: sample data · loading: checking the sign-in · signedOut: show sign-in
 // live: real data · noAccount: signed in but not a trainer or client yet
@@ -137,7 +160,11 @@ type Actions = {
   unassign: (assignmentId: ID) => void;
   setDailyGoals: (clientId: ID, goals: DailyGoal[]) => void;
   tickGoal: (clientId: ID, date: string, goalId: ID, value: boolean | boolean[]) => void;
-  setDeload: (clientId: ID, monday: string, on: boolean) => void;
+  saveDeload: (clientId: ID, week: DeloadWeek) => void;
+  removeDeload: (clientId: ID, monday: string) => void;
+  moveDeload: (clientId: ID, from: string, to: string) => void;
+  repeatDeload: (clientId: ID, from: string, every: number, times: number) => number;
+  lightenWeek: (clientId: ID, monday: string, percent: number, opts: { sets: boolean; weight: boolean }) => number;
   makeDeload: (sessionId: ID, percent: number, opts: { sets: boolean; weight: boolean }) => ID | undefined;
   addClient: (firstName: string, lastName: string, contact: string, easyView: boolean) => void;
   updateProfile: (clientId: ID, patch: { goals: string; conditions: string; trainerNotes: string }) => void;
@@ -542,41 +569,91 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     [remote],
   );
-  // Deload weeks: the trainer marks a week; clients see it on their week.
-  const setDeload = useCallback(
-    (clientId: ID, monday: string, on: boolean) => {
+  // Deload weeks: the trainer marks a week and picks what changes for this
+  // client; clients see it on their week.
+  const writeDeloads = useCallback(
+    (clientId: ID, change: (weeks: DeloadWeek[]) => DeloadWeek[]) => {
       const was = ref.current.clients.find((c) => c.id === clientId)?.deloadWeeks ?? [];
-      const weeks = on ? Array.from(new Set([...was, monday])).sort() : was.filter((w) => w !== monday);
+      const weeks = readDeloads(change(was));
       setClientFields(clientId, { deloadWeeks: weeks });
       remote(() => save.clientFields(clientId, { deload_weeks: weeks }));
     },
     [remote, setClientFields],
+  );
+  const saveDeload = useCallback((clientId: ID, week: DeloadWeek) => writeDeloads(clientId, (ws) => [...ws.filter((w) => w.week !== week.week), week]), [writeDeloads]);
+  const removeDeload = useCallback((clientId: ID, monday: string) => writeDeloads(clientId, (ws) => ws.filter((w) => w.week !== monday)), [writeDeloads]);
+  // Move a deload to another week (it replaces any deload already there).
+  const moveDeload = useCallback(
+    (clientId: ID, from: string, to: string) =>
+      writeDeloads(clientId, (ws) => {
+        const d = ws.find((w) => w.week === from);
+        return d ? [...ws.filter((w) => w.week !== from && w.week !== to), { ...d, week: to }] : ws;
+      }),
+    [writeDeloads],
+  );
+  // Copy a deload into the programme every few weeks, e.g. every 4th week.
+  // Weeks that already have a deload keep theirs. Returns how many were added.
+  const repeatDeload = useCallback(
+    (clientId: ID, from: string, every: number, times: number) => {
+      const was = ref.current.clients.find((c) => c.id === clientId)?.deloadWeeks ?? [];
+      const d = was.find((w) => w.week === from);
+      if (!d) return 0;
+      const add = Array.from({ length: times }, (_, i) => plusWeeks(from, every * (i + 1))).filter((wk) => !was.some((w) => w.week === wk));
+      if (add.length) writeDeloads(clientId, (ws) => [...ws, ...add.map((week) => ({ ...d, week }))]);
+      return add.length;
+    },
+    [writeDeloads],
   );
   // A lighter copy of a session for a deload week, which the trainer then edits.
   const makeDeload = useCallback(
     (sessionId: ID, percent: number, opts: { sets: boolean; weight: boolean }) => {
       const old = ref.current.sessions.find((x) => x.id === sessionId);
       if (!old) return undefined;
-      const keep = 1 - percent / 100;
-      const base = old.name.replace(/\s*\((?:deload|\d+)\)$/i, '');
-      const taken = ref.current.sessions.map((x) => x.name);
-      let name = `${base} (deload)`;
-      for (let n = 2; taken.includes(name); n++) name = `${base} (deload ${n})`;
-      const copy: Session = {
-        ...old,
-        id: newId(),
-        name,
-        updated: 'Just now',
-        exercises: old.exercises.map((x) => ({
-          ...x,
-          sets: opts.sets ? Math.max(1, Math.round(x.sets * keep)) : x.sets,
-          weight: opts.weight && x.weight ? lighterWeight(x.weight, keep) : x.weight,
-          dropSet: opts.sets ? false : x.dropSet,
-        })),
-      };
+      const copy = deloadCopy(old, percent, opts, ref.current.sessions.map((x) => x.name));
       set((s) => ({ ...s, sessions: [...s.sessions, copy] }));
       remote(() => save.session(biz(), copy));
       return copy.id;
+    },
+    [remote],
+  );
+  // Swap the sessions put on dates in a deload week for lighter copies.
+  // One copy per session, reused across the week. Returns how many swapped.
+  const lightenWeek = useCallback(
+    (clientId: ID, monday: string, percent: number, opts: { sets: boolean; weight: boolean }) => {
+      const days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(monday + 'T12:00:00');
+        d.setDate(d.getDate() + i);
+        return seed.isoDate(d);
+      });
+      const doneIds = new Set(ref.current.logs.filter((l) => l.clientId === clientId).map((l) => `${l.sessionId}|${l.date}`));
+      const todo = ref.current.planned.filter((p) => {
+        if (p.clientId !== clientId || !days.includes(p.date) || doneIds.has(`${p.sessionId}|${p.date}`)) return false;
+        const name = ref.current.sessions.find((x) => x.id === p.sessionId)?.name;
+        return name !== undefined && !isDeloadCopy(name);
+      });
+      const names = ref.current.sessions.map((x) => x.name);
+      const copies = new Map<ID, Session>();
+      const swapped: PlannedSession[] = [];
+      for (const p of todo) {
+        let copy = copies.get(p.sessionId);
+        if (!copy) {
+          copy = deloadCopy(ref.current.sessions.find((x) => x.id === p.sessionId)!, percent, opts, names);
+          names.push(copy.name);
+          copies.set(p.sessionId, copy);
+        }
+        swapped.push({ ...p, id: newId(), sessionId: copy.id });
+      }
+      if (!swapped.length) return 0;
+      const made = Array.from(copies.values());
+      const gone = new Set(todo.map((p) => p.id));
+      set((s) => ({ ...s, sessions: [...s.sessions, ...made], planned: [...s.planned.filter((p) => !gone.has(p.id)), ...swapped] }));
+      // Sessions first, so the calendar rows have something to point at.
+      remote(async () => {
+        for (const copy of made) await save.session(biz(), copy);
+        await save.plan(biz(), swapped);
+        for (const id of gone) await save.unplan(id);
+      });
+      return swapped.length;
     },
     [remote],
   );
@@ -687,7 +764,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions: Actions = {
     setRole, setClient, setEasyView, finishSession, submitCheckIn, addDiary, markLogSeen, markPainSeen, reply, sendMessage,
-    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, setBranding, unassign, setDailyGoals, tickGoal, setDeload, makeDeload, addClient, updateProfile, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
+    toggleFavourite, saveSession, updateSession, duplicateSession, addExercise, updateExercise, assign, setDays, planSession, unplan, copyWeek, setBranding, unassign, setDailyGoals, tickGoal, saveDeload, removeDeload, moveDeload, repeatDeload, makeDeload, lightenWeek, addClient, updateProfile, submitWeekly, markWeeklySeen, dismissWeeklyPrompt,
     setCommunity, post, react, setPlan, reset, startDemo, sendCode, verifyCode, signOut, refresh, refreshAccount, clearSyncError,
   };
   // Every action above is stable (useCallback), so this only changes with the data.

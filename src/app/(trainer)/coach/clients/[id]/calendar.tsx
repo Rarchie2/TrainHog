@@ -2,8 +2,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { daysLabel } from '@/components/Assign';
+import { DeloadPanel } from '@/components/DeloadPanel';
 import { Icon } from '@/components/Icon';
-import { Body, BodyBold, Button, Card, Chip, H3, Page, Small, Tag, Title, Toggle, useLayout, useUI } from '@/components/ui';
+import { Body, BodyBold, Button, Card, Chip, H3, Page, Small, Tag, Title, useLayout, useUI } from '@/components/ui';
+import { deloadFor, deloadShort } from '@/data/deload';
 import { isoDate, longDate, monthName } from '@/data/sample';
 import { dayItems, isMissed, startOfWeek } from '@/data/selectors';
 import { useStore } from '@/data/store';
@@ -16,7 +18,8 @@ const AHEAD = 8; // weeks shown in the plan-ahead strip
 // Hogan's calendar for one client: tap a day, add sessions to it, and copy a
 // week forward to build out a block. Week view by default (step a week at a
 // time, with the next 8 weeks at a glance); month view for the bigger picture.
-// Missed days get a red marker. Clients only ever see the current week.
+// Missed days get a red marker. Deload weeks are shaded, and the deload panel
+// under the day sets what changes. Clients only ever see the current week.
 export default function ClientCalendar() {
   const { id, week } = useLocalSearchParams<{ id: string; week?: string }>();
   const st = useStore();
@@ -76,11 +79,12 @@ export default function ClientCalendar() {
     const d = new Date(iso + 'T12:00:00');
     return `${d.getDate()} ${monthName(d).slice(0, 3)}`;
   };
+  const thisDeload = deloadFor(who, weekStart);
   const weekDays = Array.from({ length: 7 }, (_, i) => plusDays(weekStart, i));
   const ahead = Array.from({ length: AHEAD }, (_, i) => {
     const monday = plusDays(thisMonday, 7 * i);
     const count = Array.from({ length: 7 }, (_, j) => dayItems(st, who.id, plusDays(monday, j)).length).reduce((a, b) => a + b, 0);
-    return { monday, count, deload: (who.deloadWeeks ?? []).includes(monday) };
+    return { monday, count, deload: deloadFor(who, monday) };
   });
 
   const viewSwitch = (
@@ -120,7 +124,7 @@ export default function ClientCalendar() {
           <BodyBold color={c.brandText}>Back to this week</BodyBold>
         </Pressable>
       ) : null}
-      {(who.deloadWeeks ?? []).includes(weekStart) ? <Tag label="Deload week" tone="warn" /> : null}
+      {thisDeload ? <Tag label={thisDeload.changes.length ? `Deload week: ${deloadShort(thisDeload)}` : 'Deload week'} tone="warn" /> : null}
       <View>
         {weekDays.map((iso, n) => {
           const d = new Date(iso + 'T12:00:00');
@@ -174,7 +178,7 @@ export default function ClientCalendar() {
               <Pressable
                 key={w.monday}
                 accessibilityRole="button"
-                accessibilityLabel={`Week of ${shortDate(w.monday)}, ${w.count} session${w.count === 1 ? '' : 's'}`}
+                accessibilityLabel={`Week of ${shortDate(w.monday)}, ${w.count} session${w.count === 1 ? '' : 's'}${w.deload ? ', deload week' : ''}`}
                 onPress={() => {
                   setSelected(w.monday);
                   setCopied(null);
@@ -183,6 +187,7 @@ export default function ClientCalendar() {
               >
                 <Small style={{ fontFamily: fonts.bold }}>{i === 0 ? 'This week' : shortDate(w.monday)}</Small>
                 <Small color={w.count ? c.ink : c.muted}>{w.count ? `${w.count} session${w.count === 1 ? '' : 's'}` : 'Empty'}</Small>
+                {w.deload ? <Text style={{ fontSize: 11, color: c.warn, fontFamily: fonts.bold }}>Deload</Text> : null}
               </Pressable>
             );
           })}
@@ -220,7 +225,7 @@ export default function ClientCalendar() {
           const allDone = its.length > 0 && its.every((x) => x.done);
           const inMonth = d.getMonth() === month.getMonth();
           const on = iso === selected;
-          const deload = (who.deloadWeeks ?? []).includes(isoDate(startOfWeek(d)));
+          const deload = !!deloadFor(who, isoDate(startOfWeek(d)));
           return (
             <Pressable
               key={iso}
@@ -303,13 +308,7 @@ export default function ClientCalendar() {
             ) : null}
           </View>
         ))}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.line }}>
-          <Toggle label="Deload week" value={(who.deloadWeeks ?? []).includes(weekStart)} onChange={(v) => st.setDeload(who.id, weekStart, v)} />
-          <View style={{ flex: 1 }}>
-            <BodyBold>Deload week</BodyBold>
-            <Small>Shows {who.firstName} it's a lighter week. Use "Deload version" on a session to make lighter copies to put on these days.</Small>
-          </View>
-        </View>
+        <DeloadPanel who={who} monday={weekStart} onMove={shiftWeek} />
         {weekDated ? (
           <View style={{ gap: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.line }}>
             <Small>

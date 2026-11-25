@@ -12,7 +12,7 @@ it runs on demo data, so nothing breaks before setup.
 | Session parts, exercise categories (Jamie's structure) | `supabase/migrations/0003_session_structure.sql` |
 | Per-business branding (colours, logo) and video credits | `supabase/migrations/0004_branding.sql` |
 | Logo uploads (storage bucket, trainers write only their own folder) | `supabase/migrations/0005_logo_uploads.sql` |
-| Daily goals, goal ticks and deload weeks | `supabase/migrations/0006_daily_goals_deload.sql` |
+| Daily goals, goal ticks and deload weeks | `supabase/migrations/0006_daily_goals_deload.sql`. `clients.deload_weeks` holds `[{week, changes: ['sessions'\|'sets'\|'weight'], sessions?, note?}]`; older plain-date entries still read (see `src/data/deload.ts`), so no new migration was needed |
 | Connection | `src/config.ts` (project URL and publishable key) and `src/data/backend.ts` |
 | Loading and saving | `src/data/remote.ts`, used by `src/data/store.tsx` |
 | Sign-in screens | `src/components/SignIn.tsx` |
