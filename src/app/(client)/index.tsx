@@ -26,6 +26,7 @@ import {
   useLayout,
   useUI,
 } from '@/components/ui';
+import { deloadFor, deloadLines, plusWeeks } from '@/data/deload';
 import { isoDate, longDate } from '@/data/sample';
 import { greeting, startOfWeek, useClientData } from '@/data/selectors';
 import { useLookups, useMe, useStore } from '@/data/store';
@@ -147,10 +148,26 @@ function CleanToday() {
   const weekly = d.weeklyDue ? <WeeklyCard key="weekly" /> : null;
   const goals = <TodayGoals key="goals" clientId={me.id} />;
 
+  const deload = deloadFor(me, isoDate(startOfWeek()));
+  const nextDeload = deloadFor(me, plusWeeks(isoDate(startOfWeek()), 1));
   const week = (
     <Card key="week">
       <SectionHead title="This week" />
-      {(me.deloadWeeks ?? []).includes(isoDate(startOfWeek())) ? <Tag label="Deload week: a lighter week to let your body recover" tone="warn" /> : null}
+      {deload ? (
+        <View style={{ gap: 6, backgroundColor: c.warnSoft, borderRadius: 12, padding: 12 }} accessibilityLabel={`Deload week. ${deloadLines(deload).join('. ')}. ${deload.note ?? ''}`}>
+          <Tag label="Deload week" tone="warn" />
+          <Body>A lighter week to let your body recover.</Body>
+          {deloadLines(deload).map((l) => (
+            <View key={l} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              <Icon name="check" size={16} color={c.warn} />
+              <Body style={{ flex: 1, fontFamily: fonts.semibold }}>{l}</Body>
+            </View>
+          ))}
+          {deload.note ? <Body>{deload.note}</Body> : null}
+        </View>
+      ) : nextDeload ? (
+        <Tag label="Next week is a deload week: a lighter week to recover" tone="warn" />
+      ) : null}
       <Small style={{ marginTop: -8 }}>
         {d.doneThisWeek} of {Math.max(d.plannedThisWeek, d.doneThisWeek)} done
       </Small>

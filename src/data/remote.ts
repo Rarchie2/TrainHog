@@ -1,6 +1,7 @@
 // Reads and writes the real database. The store keeps working the same way
 // as the demo: it updates the screen straight away, then saves here.
 import { supabase } from './backend';
+import { readDeloads } from './deload';
 import { agoLabel } from './format';
 import { isoDate, relativeLabel } from './sample';
 import type {
@@ -26,6 +27,7 @@ import type {
   WeeklyAnswer,
   WeeklyCheckIn,
   DailyGoal,
+  DeloadWeek,
   GoalDay,
 } from './types';
 
@@ -146,7 +148,7 @@ export async function loadAll(account: Account): Promise<LoadedData> {
       planStart: c.plan_start ?? undefined,
       community: c.community,
       dailyGoals: c.daily_goals ?? [],
-      deloadWeeks: c.deload_weeks ?? [],
+      deloadWeeks: readDeloads(c.deload_weeks),
     };
   };
   const mapped = clients.map(mapClient);
@@ -316,7 +318,7 @@ export const save = {
   },
   goalDay: (b: ID, g: GoalDay) =>
     ok(db().from('goal_days').upsert({ business_id: b, client_id: g.clientId, day: g.date, hits: g.hits, updated_at: new Date().toISOString() }, { onConflict: 'client_id,day' }), 'your goals'),
-  clientFields: (id: ID, fields: { easy_view?: boolean; community?: boolean; daily_goals?: DailyGoal[]; deload_weeks?: string[]; goals?: string; conditions?: string }) =>
+  clientFields: (id: ID, fields: { easy_view?: boolean; community?: boolean; daily_goals?: DailyGoal[]; deload_weeks?: DeloadWeek[]; goals?: string; conditions?: string }) =>
     ok(db().from('clients').update(fields).eq('id', id), 'the setting'),
   trainerNotes: (b: ID, clientId: ID, notes: string) =>
     ok(db().from('client_private').upsert({ client_id: clientId, business_id: b, trainer_notes: notes }, { onConflict: 'client_id' }), 'the notes'),

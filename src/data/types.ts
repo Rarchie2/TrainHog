@@ -44,7 +44,17 @@ export type Client = {
   planStart?: string; // ISO date the plan started
   community?: boolean; // opted in to the community feed
   dailyGoals?: DailyGoal[]; // set by the trainer, ticked by the client each day
-  deloadWeeks?: string[]; // Mondays (ISO dates) of weeks the trainer marked as deload
+  deloadWeeks?: DeloadWeek[]; // weeks the trainer marked as deload, and what changes in each
+};
+
+// A deload week for one client. What changes differs from person to person
+// (Hogan, 2026-11-25): fewer sessions, fewer sets, or lighter weights, or a mix.
+export type DeloadChange = 'sessions' | 'sets' | 'weight';
+export type DeloadWeek = {
+  week: string; // Monday of the week (ISO date)
+  changes: DeloadChange[];
+  sessions?: number; // with 'sessions': how many sessions that week
+  note?: string; // shown to the client, e.g. "Keep it at RPE 6"
 };
 
 // A daily goal the trainer sets for one client. Clients just tick Hit or not.
